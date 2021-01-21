@@ -1,0 +1,3 @@
+[submodule "diplomacy"]
+	path = diplomacy
+	url = git@github.com:sequencer/diplomacy
