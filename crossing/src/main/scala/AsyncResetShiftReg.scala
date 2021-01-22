@@ -10,16 +10,16 @@ class AsyncResetShiftReg(
     extends AbstractPipelineReg(w) {
   require(depth > 0, "Depth must be greater than 0.")
 
-  override def desiredName = s"AsyncResetShiftReg_w${w}_d${depth}_i${init}"
+  override def desiredName = s"AsyncResetShiftReg_w${w}_d${depth}_i$init"
 
-  val chain = List.tabulate(depth) { i =>
-    Module(new AsyncResetRegVec(w, init)).suggestName(s"${name}_${i}")
+  val chain: List[AsyncResetRegVec] = List.tabulate(depth) { i =>
+    Module(new AsyncResetRegVec(w, init)).suggestName(s"${name}_$i")
   }
 
   chain.last.io.d := io.d
   chain.last.io.en := true.B
 
-  (chain.init.zip(chain.tail)).foreach {
+  chain.init.zip(chain.tail).foreach {
     case (sink, source) =>
       sink.io.d := source.io.q
       sink.io.en := true.B

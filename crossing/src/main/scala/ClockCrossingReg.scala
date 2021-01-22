@@ -5,17 +5,17 @@ import chisel3.util.RegEnable
 
 class ClockCrossingReg(w: Int = 1, doInit: Boolean) extends Module {
 
-  override def desiredName = s"ClockCrossingReg_w${w}"
+  override def desiredName = s"ClockCrossingReg_w$w"
 
   class AbstractPipelineRegBundle extends Bundle {
-    val d = Input(UInt(w.W))
-    val q = Output(UInt(w.W))
-    val en = Input(Bool())
+    val d:  UInt = Input(UInt(w.W))
+    val q:  UInt = Output(UInt(w.W))
+    val en: Bool = Input(Bool())
   }
 
-  val io = IO(new AbstractPipelineRegBundle)
+  val io: AbstractPipelineRegBundle = IO(new AbstractPipelineRegBundle)
 
-  val cdc_reg =
+  val cdc_reg: UInt =
     if (doInit) RegEnable(next = io.d, init = 0.U(w.W), enable = io.en)
     else RegEnable(next = io.d, enable = io.en)
   io.q := cdc_reg

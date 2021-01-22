@@ -7,7 +7,7 @@ package org.chipsalliance.utils.crossing
   * The system must have a positive total delay, otherwise you have a combinational loop.
   */
 case class CreditedDelay(debit: Int, credit: Int) {
-  val total = debit + credit
+  val total: Int = debit + credit
   require(debit >= 0)
   require(credit >= 0)
 
@@ -16,5 +16,5 @@ case class CreditedDelay(debit: Int, credit: Int) {
   def +(that: CreditedDelay): CreditedDelay =
     CreditedDelay(debit + that.debit, credit + that.credit)
 
-  override def toString = s"${debit}:${credit}"
+  override def toString = s"$debit:$credit"
 }

@@ -17,7 +17,7 @@ sealed trait RationalDirection {
 // for all possible clock ratios, but has the downside that the
 // timing must be met for the least-common-multiple of the clocks.
 case object Symmetric extends RationalDirection {
-  def flip = Symmetric
+  def flip: RationalDirection = Symmetric
 }
 
 // Like Symmetric, this crossing works for all ratios N:M.
@@ -26,19 +26,19 @@ case object Symmetric extends RationalDirection {
 // ends up costing potentially two cycles of delay, but gives
 // both clock domains a full clock period to close timing.
 case object Flexible extends RationalDirection {
-  def flip = Flexible
+  def flip: RationalDirection = Flexible
 }
 
 // If the source is N:1 of the sink, place the registers at the sink.
 // This imposes only a single clock cycle of delay and both side of
 // the crossing have a full clock period to close timing.
 case object FastToSlow extends RationalDirection {
-  def flip = SlowToFast
+  def flip: RationalDirection = SlowToFast
 }
 
 // If the source is 1:N of the sink, place the registers at the source.
 // This imposes only a single clock cycle of delay and both side of
 // the crossing have a full clock period to close timing.
 case object SlowToFast extends RationalDirection {
-  def flip = FastToSlow
+  def flip: RationalDirection = FastToSlow
 }

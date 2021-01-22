@@ -3,7 +3,7 @@ package org.chipsalliance.utils.crossing
 import chisel3._
 
 class ClockSourceIO extends Bundle {
-  val power = Input(Bool())
-  val gate = Input(Bool())
-  val clk = Output(Clock())
+  val power: Bool = Input(Bool())
+  val gate:  Bool = Input(Bool())
+  val clk:   Clock = Output(Clock())
 }

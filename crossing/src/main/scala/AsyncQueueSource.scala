@@ -1,7 +1,7 @@
 package org.chipsalliance.utils.crossing
 
 import chisel3._
-import chisel3.util.Decoupled
+import chisel3.util.{Decoupled, DecoupledIO}
 
 class AsyncQueueSource[T <: Data](
   gen:    T,
@@ -9,35 +9,35 @@ class AsyncQueueSource[T <: Data](
     extends Module {
   class AsyncQueueSourceBundle extends Bundle {
     // These come from the source domain
-    val enq = Flipped(Decoupled(gen))
+    val enq: DecoupledIO[T] = Flipped(Decoupled(gen))
     // These cross to the sink clock domain
     val async = new AsyncBundle(gen, params)
   }
-  val io = IO(new AsyncQueueSourceBundle)
-  val bits = params.bits
+  val io:   AsyncQueueSourceBundle = IO(new AsyncQueueSourceBundle)
+  val bits: Int = params.bits
   val sink_ready = WireInit(true.B)
-  val mem = Reg(Vec(params.depth, gen)) // This does NOT need to be reset at all.
-  val widx = withReset(reset.asAsyncReset)(
+  val mem: Vec[T] = Reg(Vec(params.depth, gen)) // This does NOT need to be reset at all.
+  val widx: UInt = withReset(reset.asAsyncReset)(
     GrayCounter(bits + 1, io.enq.fire(), !sink_ready, "widx_bin")
   )
-  val ridx = AsyncResetSynchronizerShiftReg(
+  val ridx: UInt = AsyncResetSynchronizerShiftReg(
     io.async.ridx,
     params.sync,
     Some("ridx_gray")
   )
-  val ready = sink_ready && widx =/= (ridx ^ (params.depth | params.depth >> 1).U)
+  val ready: Bool = sink_ready && widx =/= (ridx ^ (params.depth | params.depth >> 1).U)
 
-  val index =
+  val index: UInt =
     if (bits == 0) 0.U
     else io.async.widx(bits - 1, 0) ^ (io.async.widx(bits, bits) << (bits - 1))
   when(io.enq.fire()) { mem(index) := io.enq.bits }
 
-  val ready_reg = withReset(reset.asAsyncReset)(
+  val ready_reg: Bool = withReset(reset.asAsyncReset)(
     RegNext(next = ready, init = false.B).suggestName("ready_reg")
   )
   io.enq.ready := ready_reg && sink_ready
 
-  val widx_reg = withReset(reset.asAsyncReset)(
+  val widx_reg: UInt = withReset(reset.asAsyncReset)(
     RegNext(next = widx, init = 0.U).suggestName("widx_gray")
   )
   io.async.widx := widx_reg

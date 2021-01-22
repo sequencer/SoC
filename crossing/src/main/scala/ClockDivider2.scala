@@ -14,10 +14,10 @@ import chisel3.util.HasBlackBoxInline
   */
 class ClockDivider2 extends BlackBox with HasBlackBoxInline {
   class ClockDivider2Bundle extends Bundle {
-    val clk_out = Output(Clock())
-    val clk_in = Input(Clock())
+    val clk_out: Clock = Output(Clock())
+    val clk_in:  Clock = Input(Clock())
   }
-  val io = IO(new ClockDivider2Bundle)
+  val io: ClockDivider2Bundle = IO(new ClockDivider2Bundle)
 
   setInline(
     "ClockDivider2",

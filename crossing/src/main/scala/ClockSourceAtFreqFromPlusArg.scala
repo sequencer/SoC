@@ -5,7 +5,7 @@ import chisel3.util.HasBlackBoxInline
 
 /** This clock source is only intended to be used in test harnesses, and does not work correctly in verilator. */
 class ClockSourceAtFreqFromPlusArg(val plusArgName: String) extends BlackBox with HasBlackBoxInline {
-  val io = IO(new ClockSourceIO)
+  val io: Record = IO(new ClockSourceIO)
 
   override def desiredName = s"ClockSourceAtFreqFromPlusArg$plusArgName"
 

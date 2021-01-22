@@ -17,9 +17,9 @@ final class CreditedIO[T <: Data](gen: T) extends Bundle {
   override def cloneType: this.type = new CreditedIO(genType).asInstanceOf[this.type]
   def genType:            T = gen
 
-  val credit = Input(Bool()) // 1: a credit is given to the sender by the receiver
-  val debit = Output(Bool()) // 1: a credit is consumed by the sender to transfer 'bits'
-  val bits = Output(genType)
+  val credit: Bool = Input(Bool()) // 1: a credit is given to the sender by the receiver
+  val debit:  Bool = Output(Bool()) // 1: a credit is consumed by the sender to transfer 'bits'
+  val bits:   T = Output(genType)
 
   /** Provide a DecoupledIO interface for sending CreditedIO[Data].
     * Convert an IrrevocableIO input to DecoupledIO via Decoupled().

@@ -1,7 +1,7 @@
 package org.chipsalliance.utils.crossing
 
 import chisel3._
-import chisel3.util.Decoupled
+import chisel3.util.{Decoupled, DecoupledIO}
 
 class AsyncQueueSink[T <: Data](
   gen:    T,
@@ -9,36 +9,36 @@ class AsyncQueueSink[T <: Data](
     extends Module {
   class AsyncQueueSinkBundle extends Bundle {
     // These come from the sink domain
-    val deq = Decoupled(gen)
+    val deq: DecoupledIO[T] = Decoupled(gen)
     // These cross to the source clock domain
-    val async = Flipped(new AsyncBundle(gen, params))
+    val async: AsyncBundle[T] = Flipped(new AsyncBundle(gen, params))
   }
-  val io = IO(new AsyncQueueSinkBundle)
+  val io: AsyncQueueSinkBundle = IO(new AsyncQueueSinkBundle)
 
-  val bits = params.bits
+  val bits: Int = params.bits
   val source_ready = WireInit(true.B)
-  val ridx = withReset(reset.asAsyncReset)(
+  val ridx: UInt = withReset(reset.asAsyncReset)(
     GrayCounter(bits + 1, io.deq.fire(), !source_ready, "ridx_bin")
   )
-  val widx = AsyncResetSynchronizerShiftReg(
+  val widx: UInt = AsyncResetSynchronizerShiftReg(
     io.async.widx,
     params.sync,
     Some("widx_gray")
   )
-  val valid = source_ready && ridx =/= widx
+  val valid: Bool = source_ready && ridx =/= widx
 
   // The mux is safe because timing analysis ensures ridx has reached the register
   // On an ASIC, changes to the unread location cannot affect the selected value
   // On an FPGA, only one input changes at a time => mem updates don't cause glitches
   // The register only latches when the selected valued is not being written
-  val index =
+  val index: UInt =
     if (bits == 0) 0.U else ridx(bits - 1, 0) ^ (ridx(bits, bits) << (bits - 1))
   io.async.index.foreach { _ := index }
   // This register does not NEED to be reset, as its contents will not
   // be considered unless the asynchronously reset deq valid register is set.
   // It is possible that bits latches when the source domain is reset / has power cut
   // This is safe, because isolation gates brought mem low before the zeroed widx reached us
-  val deq_bits_nxt = io.async.mem(if (params.narrow) 0.U else index)
+  val deq_bits_nxt: T = io.async.mem(if (params.narrow) 0.U else index)
   io.deq.bits := ClockCrossingReg(
     deq_bits_nxt,
     en = valid,
@@ -46,12 +46,12 @@ class AsyncQueueSink[T <: Data](
     name = Some("deq_bits_reg")
   )
 
-  val valid_reg = withReset(reset.asAsyncReset)(
+  val valid_reg: Bool = withReset(reset.asAsyncReset)(
     RegNext(next = valid, init = false.B).suggestName("valid_reg")
   )
   io.deq.valid := valid_reg && source_ready
 
-  val ridx_reg = withReset(reset.asAsyncReset)(
+  val ridx_reg: UInt = withReset(reset.asAsyncReset)(
     RegNext(next = ridx, init = 0.U).suggestName("ridx_gray")
   )
   io.async.ridx := ridx_reg

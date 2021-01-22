@@ -16,12 +16,12 @@ case class AsyncQueueParams(
   require(depth > 0 && isPow2(depth))
   require(sync >= 2)
 
-  val bits = log2Ceil(depth)
-  val wires = if (narrow) 1 else depth
+  val bits:  Int = log2Ceil(depth)
+  val wires: Int = if (narrow) 1 else depth
 }
 
 object AsyncQueueParams {
   // When there is only one entry, we don't need narrow.
-  def singleton(sync: Int = 3, safe: Boolean = true) =
-    AsyncQueueParams(1, sync, safe, false)
+  def singleton(sync: Int = 3, safe: Boolean = true): AsyncQueueParams =
+    AsyncQueueParams(1, sync, safe)
 }

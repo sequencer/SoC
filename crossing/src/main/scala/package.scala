@@ -91,7 +91,7 @@ package object crossing {
       case (i, next) =>
         val r = RegNext(next, init = init)
         name.foreach { na =>
-          r.suggestName(s"${na}_${i}")
+          r.suggestName(s"${na}_$i")
         }
         r
     }
@@ -113,12 +113,5 @@ package object crossing {
     val NonSync, Inferred, Sync, Async = Value
   }
 
-  val NoCrossing = SynchronousCrossing(BufferParams.none)
-
-  // @todo helpers move to top
-  implicit class BooleanToAugmentedBoolean(private val x: Boolean) extends AnyVal {
-    def toInt: Int = if (x) 1 else 0
-    // this one's snagged from scalaz
-    def option[T](z: => T): Option[T] = if (x) Some(z) else None
-  }
+  val NoCrossing: SynchronousCrossing = SynchronousCrossing(BufferParams.none)
 }

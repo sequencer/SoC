@@ -15,9 +15,9 @@ class ShiftQueue[T <: Data](
   flow:        Boolean = false)
     extends Module {
   class ShiftQueueBundle extends QueueIO(gen, entries) {
-    val mask = Output(UInt(entries.W))
+    val mask: UInt = Output(UInt(entries.W))
   }
-  val io = IO(new ShiftQueueBundle)
+  val io: ShiftQueueBundle = IO(new ShiftQueueBundle)
 
   private val valid = RegInit(VecInit(Seq.fill(entries) { false.B }))
   private val elts = Reg(Vec(entries, gen))

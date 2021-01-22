@@ -12,12 +12,12 @@ import chisel3.{withClockAndReset, withReset}
 
 class ResetCatchAndSync(sync: Int = 3) extends Module {
 
-  override def desiredName = s"ResetCatchAndSync_d${sync}"
+  override def desiredName = s"ResetCatchAndSync_d$sync"
 
   class ResetCatchAndSyncBundle extends Bundle {
-    val sync_reset = Output(Bool())
+    val sync_reset: Bool = Output(Bool())
   }
-  val io = IO(new ResetCatchAndSyncBundle)
+  val io: ResetCatchAndSyncBundle = IO(new ResetCatchAndSyncBundle)
 
   // implemented by Jiuyang
   io.sync_reset := withClockAndReset(clock, reset) { RegNext(RegNext(true.B, false.B), false.B).asAsyncReset }

@@ -1,15 +1,15 @@
 package org.chipsalliance.utils.crossing
 
-import chisel3.{Data, Module}
+import chisel3.{Data, Module, Record}
 
 class RationalCrossingFull[T <: Data](
   gen:       T,
   direction: RationalDirection = Symmetric)
     extends Module {
-  val io = IO(new CrossingIO(gen))
+  val io: CrossingIO[T] = IO(new CrossingIO(gen))
 
-  val source = Module(new RationalCrossingSource(gen, direction))
-  val sink = Module(new RationalCrossingSink(gen, direction))
+  val source: RationalCrossingSource[T] = Module(new RationalCrossingSource(gen, direction))
+  val sink:   RationalCrossingSink[T] = Module(new RationalCrossingSink(gen, direction))
 
   source.clock := io.enq_clock
   source.reset := io.enq_reset

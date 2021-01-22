@@ -1,15 +1,15 @@
 package org.chipsalliance.utils.crossing
 
 import chisel3.util.Cat
-import chisel3.withReset
+import chisel3.{withReset, Bool}
 
 // Note: This module may end up with a non-AsyncReset type reset.
 // But the Primitives within will always have AsyncReset type.
 class AsyncResetSynchronizerShiftReg(w: Int = 1, sync: Int, init: Int) extends AbstractPipelineReg(w) {
-  require(sync > 1, s"Sync must be greater than 1, not ${sync}.")
+  require(sync > 1, s"Sync must be greater than 1, not $sync.")
   override def desiredName =
-    s"AsyncResetSynchronizerShiftReg_w${w}_d${sync}_i${init}"
-  val output = Seq.tabulate(w) { i =>
+    s"AsyncResetSynchronizerShiftReg_w${w}_d${sync}_i$init"
+  val output: Seq[Bool] = Seq.tabulate(w) { i =>
     val initBit = ((init >> i) & 1) > 0
     withReset(reset.asAsyncReset) {
       SynchronizerPrimitiveShiftReg(

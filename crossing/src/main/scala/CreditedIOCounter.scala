@@ -10,8 +10,8 @@ class CreditedIOCounter(val init: Int, val depth: Int) {
   private val v = RegInit(init.U(log2Ceil(depth + 1).W))
   private val nextV = WireInit(v)
 
-  val value = v + 0.U
-  val nextValue = nextV + 0.U
+  val value:     UInt = v + 0.U
+  val nextValue: UInt = nextV + 0.U
 
   def full:  Bool = v === depth.U
   def empty: Bool = v === 0.U

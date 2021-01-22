@@ -12,7 +12,7 @@ class ClockSourceAtFreq(val freqMHz: Double)
       )
     )
     with HasBlackBoxInline {
-  val io = IO(new ClockSourceIO)
+  val io: Record = IO(new ClockSourceIO)
 
   setInline(
     "ClockSourceAtFreq.v",

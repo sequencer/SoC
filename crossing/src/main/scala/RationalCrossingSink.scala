@@ -8,22 +8,22 @@ class RationalCrossingSink[T <: Data](
   direction: RationalDirection = Symmetric)
     extends Module {
   class RationalCrossingSinkBundle extends Bundle {
-    val enq = Flipped(RationalIO(gen))
-    val deq = Decoupled(gen)
+    val enq: RationalIO[T] = Flipped(RationalIO(gen))
+    val deq: DecoupledIO[T] = Decoupled(gen)
   }
-  val io = IO(new RationalCrossingSinkBundle)
+  val io: RationalCrossingSinkBundle = IO(new RationalCrossingSinkBundle)
 
-  val enq = io.enq
-  val deq = Wire(chiselTypeOf(io.deq))
+  val enq: RationalIO[T] = io.enq
+  val deq: DecoupledIO[T] = Wire(chiselTypeOf(io.deq))
   direction match {
     case Symmetric  => io.deq <> ShiftQueue(deq, 1, pipe = true)
-    case Flexible   => io.deq <> ShiftQueue(deq, 2)
-    case FastToSlow => io.deq <> ShiftQueue(deq, 2)
+    case Flexible   => io.deq <> ShiftQueue(deq)
+    case FastToSlow => io.deq <> ShiftQueue(deq)
     case SlowToFast => io.deq <> deq
   }
 
-  val count = RegInit(0.U(2.W))
-  val equal = count === enq.source
+  val count: UInt = RegInit(0.U(2.W))
+  val equal: Bool = count === enq.source
 
   enq.ready := deq.ready
   enq.sink := count

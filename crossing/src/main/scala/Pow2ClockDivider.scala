@@ -8,9 +8,9 @@ import chisel3._
   */
 class Pow2ClockDivider(pow2: Int) extends Module {
   class Pow2ClockDividerBundle extends Bundle {
-    val clock_out = Output(Clock())
+    val clock_out: Clock = Output(Clock())
   }
-  val io = IO(new Pow2ClockDividerBundle)
+  val io: Pow2ClockDividerBundle = IO(new Pow2ClockDividerBundle)
 
   if (pow2 == 0) {
     io.clock_out := clock

@@ -8,22 +8,22 @@ class RationalCrossingSource[T <: Data](
   direction: RationalDirection = Symmetric)
     extends Module {
   class RationalCrossingSourceBundle extends Bundle {
-    val enq = Flipped(DecoupledIO(gen))
-    val deq = RationalIO(gen)
+    val enq: DecoupledIO[T] = Flipped(DecoupledIO(gen))
+    val deq: RationalIO[T] = RationalIO(gen)
   }
-  val io = IO(new RationalCrossingSourceBundle)
+  val io: RationalCrossingSourceBundle = IO(new RationalCrossingSourceBundle)
 
-  val enq_in = BlockDuringReset(io.enq)
-  val deq = io.deq
-  val enq = direction match {
+  val enq_in: DecoupledIO[T] = BlockDuringReset(io.enq)
+  val deq:    RationalIO[T] = io.deq
+  val enq: DecoupledIO[T] = direction match {
     case Symmetric  => ShiftQueue(enq_in, 1, flow = true)
-    case Flexible   => ShiftQueue(enq_in, 2)
+    case Flexible   => ShiftQueue(enq_in)
     case FastToSlow => enq_in
-    case SlowToFast => ShiftQueue(enq_in, 2)
+    case SlowToFast => ShiftQueue(enq_in)
   }
 
-  val count = RegInit(0.U(2.W))
-  val equal = count === deq.sink
+  val count: UInt = RegInit(0.U(2.W))
+  val equal: Bool = count === deq.sink
 
   deq.valid := enq.valid
   deq.source := count

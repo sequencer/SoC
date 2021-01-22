@@ -16,8 +16,8 @@ import chisel3._
   */
 abstract class AbstractPipelineReg(w: Int = 1) extends Module {
   class AbstractPipelineRegBundle extends Bundle {
-    val d = Input(UInt(w.W))
-    val q = Output(UInt(w.W))
+    val d: UInt = Input(UInt(w.W))
+    val q: UInt = Output(UInt(w.W))
   }
   val io: AbstractPipelineRegBundle = IO(new AbstractPipelineRegBundle)
 }

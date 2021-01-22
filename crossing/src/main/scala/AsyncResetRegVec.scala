@@ -3,11 +3,11 @@ package org.chipsalliance.utils.crossing
 import chisel3._
 
 class AsyncResetRegVec(val w: Int, val init: BigInt) extends Module {
-  override def desiredName = s"AsyncResetRegVec_w${w}_i${init}"
+  override def desiredName = s"AsyncResetRegVec_w${w}_i$init"
 
-  val io = IO(new SimpleRegIO(w))
+  val io: SimpleRegIO = IO(new SimpleRegIO(w))
 
-  val reg = withReset(reset.asAsyncReset)(RegInit(init.U(w.W)))
+  val reg: UInt = withReset(reset.asAsyncReset)(RegInit(init.U(w.W)))
   when(io.en) {
     reg := io.d
   }

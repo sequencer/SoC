@@ -6,9 +6,9 @@ class AsyncQueue[T <: Data](
   gen:    T,
   params: AsyncQueueParams = AsyncQueueParams())
     extends Module {
-  val io = IO(new CrossingIO(gen))
-  val source = Module(new AsyncQueueSource(gen, params))
-  val sink = Module(new AsyncQueueSink(gen, params))
+  val io:     CrossingIO[T] = IO(new CrossingIO(gen))
+  val source: AsyncQueueSource[T] = Module(new AsyncQueueSource(gen, params))
+  val sink:   AsyncQueueSink[T] = Module(new AsyncQueueSink(gen, params))
 
   source.clock := io.enq_clock
   source.reset := io.enq_reset

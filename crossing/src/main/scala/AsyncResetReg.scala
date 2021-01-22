@@ -3,16 +3,17 @@ package org.chipsalliance.utils.crossing
 import chisel3._
 
 class AsyncResetReg(resetValue: Int = 0) extends RawModule {
-  val io = IO(new Bundle {
-    val d = Input(Bool())
-    val q = Output(Bool())
-    val en = Input(Bool())
+  class AsyncResetRegBundle extends Bundle {
+    val d:  Bool = Input(Bool())
+    val q:  Bool = Output(Bool())
+    val en: Bool = Input(Bool())
 
-    val clk = Input(Clock())
-    val rst = Input(Bool())
-  })
+    val clk: Clock = Input(Clock())
+    val rst: Bool = Input(Bool())
+  }
+  val io: AsyncResetRegBundle = IO(new AsyncResetRegBundle)
 
-  val reg =
+  val reg: UInt =
     withClockAndReset(io.clk, io.rst.asAsyncReset)(RegInit(resetValue.U(1.W)))
   when(io.en) {
     reg := io.d
@@ -39,9 +40,9 @@ object AsyncResetReg {
   }
 
   def apply(d: Bool, clk: Clock, rst: Bool): Bool =
-    apply(d, clk, rst, false, None)
+    apply(d, clk, rst, init = false, None)
   def apply(d: Bool, clk: Clock, rst: Bool, name: String): Bool =
-    apply(d, clk, rst, false, Some(name))
+    apply(d, clk, rst, init = false, Some(name))
 
   // Create Vectors of Registers
   def apply(

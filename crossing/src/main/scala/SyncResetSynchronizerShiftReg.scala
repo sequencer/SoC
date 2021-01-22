@@ -10,10 +10,10 @@ import chisel3.util.Cat
   "rocket-chip 1.2"
 )
 class SyncResetSynchronizerShiftReg(w: Int = 1, sync: Int, init: Int) extends AbstractPipelineReg(w) {
-  require(sync > 1, s"Sync must be greater than 1, not ${sync}.")
+  require(sync > 1, s"Sync must be greater than 1, not $sync.")
   override def desiredName =
-    s"SyncResetSynchronizerShiftReg_w${w}_d${sync}_i${init}"
-  val output = Seq.tabulate(w) { i =>
+    s"SyncResetSynchronizerShiftReg_w${w}_d${sync}_i$init"
+  val output: Seq[Bool] = Seq.tabulate(w) { i =>
     val initBit = ((init >> i) & 1) > 0
     withReset(reset.asBool) {
       SynchronizerPrimitiveShiftReg(

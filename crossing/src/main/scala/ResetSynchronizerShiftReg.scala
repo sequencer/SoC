@@ -1,14 +1,15 @@
 package org.chipsalliance.utils.crossing
 
+import chisel3.Bool
 import chisel3.util.Cat
 
 class ResetSynchronizerShiftReg(w: Int = 1, sync: Int, init: Int) extends AbstractPipelineReg(w) {
-  require(sync > 1, s"Sync must be greater than 1, not ${sync}.")
+  require(sync > 1, s"Sync must be greater than 1, not $sync.")
 
   override def desiredName =
-    s"ResetSynchronizerShiftReg_w${w}_d${sync}_i${init}"
+    s"ResetSynchronizerShiftReg_w${w}_d${sync}_i$init"
 
-  val output = Seq.tabulate(w) { i =>
+  val output: Seq[Bool] = Seq.tabulate(w) { i =>
     val initBit = ((init >> i) & 1) > 0
     SynchronizerPrimitiveShiftReg(
       io.d(i),

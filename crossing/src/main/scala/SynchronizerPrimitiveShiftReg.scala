@@ -10,15 +10,15 @@ private class SynchronizerPrimitiveShiftReg(
   resetType: SynchronizerResetType.Value)
     extends AbstractPipelineReg(1) {
 
-  val initInt = if (init) 1 else 0
-  val initPostfix = resetType match {
+  val initInt: Int = if (init) 1 else 0
+  val initPostfix: String = resetType match {
     case SynchronizerResetType.NonSync => ""
-    case _                             => s"_i${initInt}"
+    case _                             => s"_i$initInt"
   }
   override def desiredName =
-    s"${resetType.toString}ResetSynchronizerPrimitiveShiftReg_d${sync}${initPostfix}"
+    s"${resetType.toString}ResetSynchronizerPrimitiveShiftReg_d$sync$initPostfix"
 
-  val chain = List.tabulate(sync) { i =>
+  val chain: Seq[Bool] = List.tabulate(sync) { i =>
     val reg =
       if (resetType == SynchronizerResetType.NonSync) Reg(Bool())
       else RegInit(init.B)
@@ -26,7 +26,7 @@ private class SynchronizerPrimitiveShiftReg(
   }
   chain.last := io.d.asBool
 
-  (chain.init.zip(chain.tail)).foreach {
+  chain.init.zip(chain.tail).foreach {
     case (sink, source) =>
       sink := source
   }

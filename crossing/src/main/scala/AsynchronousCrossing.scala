@@ -7,5 +7,5 @@ case class AsynchronousCrossing(
   safe:       Boolean = true,
   narrow:     Boolean = false)
     extends ClockCrossingType {
-  def asSinkParams = AsyncQueueParams(depth, sinkSync, safe, narrow)
+  def asSinkParams: AsyncQueueParams = AsyncQueueParams(depth, sinkSync, safe, narrow)
 }
