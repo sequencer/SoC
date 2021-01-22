@@ -4,18 +4,18 @@ package org.chipsalliance.utils.addressing
 
 // Use AddressSet instead -- this is just for pretty printing
 case class AddressRange(base: BigInt, size: BigInt) extends Ordered[AddressRange] {
-  val end = base + size
+  val end: BigInt = base + size
 
   require(base >= 0, s"AddressRange base must be positive, got: $base")
   require(size > 0, s"AddressRange size must be > 0, got: $size")
 
-  def compare(x: AddressRange) = {
+  def compare(x: AddressRange): Int = {
     val primary = (this.base - x.base).signum
     val secondary = (x.size - this.size).signum
     if (primary != 0) primary else secondary
   }
 
-  def contains(x: AddressRange) = base <= x.base && x.end <= end
+  def contains(x: AddressRange): Boolean = base <= x.base && x.end <= end
   def union(x: AddressRange): Option[AddressRange] = {
     if (base > x.end || x.base > end) {
       None
@@ -28,15 +28,15 @@ case class AddressRange(base: BigInt, size: BigInt) extends Ordered[AddressRange
 
   private def helper(base: BigInt, end: BigInt) =
     if (base < end) Seq(AddressRange(base, end - base)) else Nil
-  def subtract(x: AddressRange) =
+  def subtract(x: AddressRange): Seq[AddressRange] =
     helper(base, end.min(x.base)) ++ helper(base.max(x.end), end)
 
   // We always want to see things in hex
-  override def toString() = "AddressRange(0x%x, 0x%x)".format(base, size)
+  override def toString: String = "AddressRange(0x%x, 0x%x)".format(base, size)
 
   // Other possible output formats
-  def toUVM:  String = f"    set_addr_range(1, 32'h${base}%08x, 32'h${end}%08x);"
-  def toJSON: String = s"""{"base": ${base}, "max": ${end}}"""
+  def toUVM:  String = f"    set_addr_range(1, 32'h$base%08x, 32'h$end%08x);"
+  def toJSON: String = s"""{"base": $base, "max": $end}"""
 }
 
 object AddressRange {

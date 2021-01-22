@@ -5,6 +5,9 @@ package org.chipsalliance.utils.addressing
 import chisel3._
 import chisel3.util.log2Floor
 
+import scala.annotation.tailrec
+import scala.collection.immutable
+
 // AddressSets specify the address space managed by the manager
 // Base is the base address, and mask are the bits consumed by the manager
 // e.g: base=0x200, mask=0xff describes a device managing 0x200-0x2ff
@@ -13,7 +16,7 @@ case class AddressSet(base: BigInt, mask: BigInt) extends Ordered[AddressSet] {
   // Forbid misaligned base address (and empty sets)
   require(
     (base & mask) == 0,
-    s"Mis-aligned AddressSets are forbidden, got: ${this.toString}"
+    s"Mis-aligned AddressSets are forbidden, got: ${this.toString()}"
   )
   require(
     base >= 0,
@@ -21,29 +24,29 @@ case class AddressSet(base: BigInt, mask: BigInt) extends Ordered[AddressSet] {
   ) // TL2 address widths are not fixed => negative is ambiguous
   // We do allow negative mask (=> ignore all high bits)
 
-  def contains(x: BigInt) = ((x ^ base) & ~mask) == 0
-  def contains(x: UInt) = ((x ^ base.U).zext() & (~mask).S) === 0.S
+  def contains(x: BigInt): Boolean = ((x ^ base) & ~mask) == 0
+  def contains(x: UInt):   Bool = ((x ^ base.U).zext() & (~mask).S) === 0.S
 
   // turn x into an address contained in this set
   def legalize(x: UInt): UInt = base.U | (mask.U & x)
 
   // overlap iff bitwise: both care (~mask0 & ~mask1) => both equal (base0=base1)
-  def overlaps(x: AddressSet) = (~(mask | x.mask) & (base ^ x.base)) == 0
+  def overlaps(x: AddressSet): Boolean = (~(mask | x.mask) & (base ^ x.base)) == 0
   // contains iff bitwise: x.mask => mask && contains(x.base)
-  def contains(x: AddressSet) = ((x.mask | (base ^ x.base)) & ~mask) == 0
+  def contains(x: AddressSet): Boolean = ((x.mask | (base ^ x.base)) & ~mask) == 0
 
   // The number of bytes to which the manager must be aligned
-  def alignment = ((mask + 1) & ~mask)
+  def alignment: BigInt = (mask + 1) & ~mask
   // Is this a contiguous memory range
-  def contiguous = alignment == mask + 1
+  def contiguous: Boolean = alignment == mask + 1
 
-  def finite = mask >= 0
-  def max = {
+  def finite: Boolean = mask >= 0
+  def max: BigInt = {
     require(finite, "Max cannot be calculated on infinite mask"); base | mask
   }
 
   // Widen the match function to ignore all bits in imask
-  def widen(imask: BigInt) = AddressSet(base & ~imask, mask | imask)
+  def widen(imask: BigInt): AddressSet = AddressSet(base & ~imask, mask | imask)
 
   // Return an AddressSet that only contains the addresses both sets contain
   def intersect(x: AddressSet): Option[AddressSet] = {
@@ -69,14 +72,14 @@ case class AddressSet(base: BigInt, mask: BigInt) extends Ordered[AddressSet] {
   }
 
   // AddressSets have one natural Ordering (the containment order, if contiguous)
-  def compare(x: AddressSet) = {
+  def compare(x: AddressSet): Int = {
     val primary = (this.base - x.base).signum // smallest address first
     val secondary = (x.mask - this.mask).signum // largest mask first
     if (primary != 0) primary else secondary
   }
 
   // We always want to see things in hex
-  override def toString() = {
+  override def toString: String = {
     if (mask >= 0) {
       "AddressSet(0x%x, 0x%x)".format(base, mask)
     } else {
@@ -84,7 +87,17 @@ case class AddressSet(base: BigInt, mask: BigInt) extends Ordered[AddressSet] {
     }
   }
 
-  def toRanges = {
+  def bitIndexes(x: BigInt, tail: Seq[Int] = Nil): Seq[Int] = {
+    require(x >= 0)
+    if (x == 0) {
+      tail.reverse
+    } else {
+      val lowest = x.lowestSetBit
+      bitIndexes(x.clearBit(lowest), lowest +: tail)
+    }
+  }
+
+  def toRanges: immutable.IndexedSeq[AddressRange] = {
     require(finite, "Ranges cannot be calculated on infinite mask")
     val size = alignment
     val fragments = mask & ~(size - 1)
@@ -99,7 +112,8 @@ case class AddressSet(base: BigInt, mask: BigInt) extends Ordered[AddressSet] {
 }
 
 object AddressSet {
-  val everything = AddressSet(0, -1)
+  val everything: AddressSet = AddressSet(0, -1)
+  @tailrec
   def misaligned(
     base: BigInt,
     size: BigInt,
@@ -141,6 +155,7 @@ object AddressSet {
   }
 
   def enumerateMask(mask: BigInt): Seq[BigInt] = {
+    @tailrec
     def helper(id: BigInt, tail: Seq[BigInt]): Seq[BigInt] =
       if (id == mask) (id +: tail).reverse
       else helper(((~mask | id) + 1) & mask, id +: tail)

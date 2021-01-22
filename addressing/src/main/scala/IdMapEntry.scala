@@ -7,7 +7,7 @@ trait IdMapEntry {
   def isCache:                 Boolean
   def requestFifo:             Boolean
   def maxTransactionsInFlight: Option[Int]
-  def pretty(fmt: String) =
+  def pretty(fmt: String): String =
     if (from ne to) { // if the subclass uses the same reference for both from and to, assume its format string has an arity of 5
       fmt.format(
         to.start,
