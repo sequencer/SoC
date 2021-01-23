@@ -3,10 +3,10 @@
 package org.chipsalliance.utils.dts
 
 import chisel3.util.log2Ceil
-import org.chipsalliance.utils.addressing.{AddressRange, AddressSet}
 import diplomacy._
-import scala.collection.immutable.{ListMap, SortedMap}
-import scala.collection.mutable.HashMap
+import org.chipsalliance.utils.addressing.{AddressRange, AddressSet}
+
+import scala.collection.{immutable, mutable}
 
 sealed trait ResourceValue
 
@@ -25,7 +25,8 @@ case class ResourcePermissions(r: Boolean, w: Boolean, x: Boolean, c: Boolean, a
   */
 final case class ResourceAddress(address: Seq[AddressSet], permissions: ResourcePermissions) extends ResourceValue {
   /* For things like SPI which uses simple integer addressing */
-  def this(x: Int) = this(Seq(AddressSet(x, 0)), ResourcePermissions(false, false, false, false, false))
+  def this(x: Int) =
+    this(Seq(AddressSet(x, 0)), ResourcePermissions(r = false, w = false, x = false, c = false, a = false))
 }
 object ResourceAddress {
   def apply(x: Int) = new ResourceAddress(x)
@@ -74,12 +75,12 @@ abstract class Device {
   def parent: Option[Device] = None
 
   /** make sure all derived devices have an unique label */
-  val label = "L" + Device.index.toString
+  val label: String = "L" + Device.index.toString
   Device.index = Device.index + 1
 }
 
 abstract class DeviceSnippet extends Device {
-  final def describe(resources: ResourceBindings) = describe()
+  final def describe(resources: ResourceBindings): Description = describe()
   def describe(): Description
 
   ResourceBinding { Resource(this, "exists").bind(ResourceString("yes")) }
@@ -99,7 +100,7 @@ trait DeviceInterrupts {
   def describeInterrupts(resources: ResourceBindings): Map[String, Seq[ResourceValue]] = {
     val int = resources("int")
 
-    int.foreach { b => require(b.device.isDefined, s"Device ${this} property 'int' is missing user device") }
+    int.foreach { b => require(b.device.isDefined, s"Device $this property 'int' is missing user device") }
     val parents = int.map(_.device.get).distinct
     val simple = parents.size == 1 && !alwaysExtended
 
@@ -117,7 +118,7 @@ trait DeviceInterrupts {
       else
         Some("interrupts-extended" -> int.flatMap(b => Seq(ResourceReference(b.device.get.label), b.value)))
 
-    ListMap() ++ parent ++ interrupts ++ interrupts_extended
+    immutable.ListMap() ++ parent ++ interrupts ++ interrupts_extended
   }
 
   def int = Seq(Resource(this, "int"))
@@ -128,11 +129,11 @@ trait DeviceClocks {
   this: Device =>
 
   /** The number of clocks this device must have; default to 0-1 */
-  val requiredClocks = 0 to 1
+  val requiredClocks: immutable.Seq[Int] = 0 to 1
   def describeClocks(resources: ResourceBindings): Map[String, Seq[ResourceValue]] = {
     val clocks = resources("clocks").map(_.value)
     require(requiredClocks.contains(clocks.size))
-    if (!clocks.isEmpty) Map("clocks" -> clocks) else Map()
+    if (clocks.nonEmpty) Map("clocks" -> clocks) else Map()
   }
 }
 
@@ -144,12 +145,12 @@ trait DeviceRegName {
     if (reg.isEmpty) {
       devname
     } else {
-      val (named, bulk) = reg.partition { case (k, v) => DiplomacyUtils.regName(k).isDefined }
+      val (named, bulk) = reg.partition { case (k, _) => DiplomacyUtils.regName(k).isDefined }
       val mainreg = reg.head._2
-      require(!mainreg.isEmpty, s"reg binding for $devname is empty!")
+      require(mainreg.nonEmpty, s"reg binding for $devname is empty!")
       mainreg.head.value match {
-        case x: ResourceAddress => s"${devname}@${x.address.head.base.toString(16)}"
-        case _ => require(false, s"Device has the wrong type of 'reg' property (${reg.head})"); ""
+        case x: ResourceAddress => s"$devname@${x.address.head.base.toString(16)}"
+        case _ => throw new Exception(s"Device has the wrong type of 'reg' property (${reg.head})"); ""
       }
     }
   }
@@ -164,7 +165,7 @@ object DiplomacyUtils {
   def rangeFilter(name: String): Boolean = name == "ranges"
   def regName(name: String): Option[String] = {
     val keys = name.split("/")
-    require(keys.size >= 1 && keys.size <= 2 && keys(0) == "reg", s"Invalid reg name '${name}'")
+    require(keys.nonEmpty && keys.size <= 2 && keys(0) == "reg", s"Invalid reg name '$name'")
     if (keys.size == 1) None else Some(keys(1))
   }
 }
@@ -178,7 +179,7 @@ class SimpleDevice(val devname: String, devcompat: Seq[String])
     with DeviceInterrupts
     with DeviceClocks
     with DeviceRegName {
-  override def parent = Some(ResourceAnchors.soc) // nearly everything on-chip belongs here
+  override def parent: Option[Device] = Some(ResourceAnchors.soc) // nearly everything on-chip belongs here
 
   var deviceNamePlusAddress: String = ""
 
@@ -188,17 +189,17 @@ class SimpleDevice(val devname: String, devcompat: Seq[String])
     val clocks = describeClocks(resources)
 
     def optDef(x: String, seq: Seq[ResourceValue]) = if (seq.isEmpty) None else Some(x -> seq)
-    val compat = optDef("compatible", devcompat.map(ResourceString(_))) // describe the list of compatiable devices
+    val compat = optDef("compatible", devcompat.map(ResourceString)) // describe the list of compatiable devices
 
     val reg = resources.map.filterKeys(DiplomacyUtils.regFilter)
-    val (named, bulk) = reg.partition { case (k, v) => DiplomacyUtils.regName(k).isDefined }
+    val (named, bulk) = reg.partition { case (k, _) => DiplomacyUtils.regName(k).isDefined }
     // We need to be sure that each named reg has exactly one AddressRange associated to it
     named.foreach {
       case (k, Seq(Binding(_, value: ResourceAddress))) =>
         val ranges = AddressRange.fromSets(value.address)
         require(ranges.size == 1, s"DTS device $name has $k = $ranges, must be a single range!")
       case (k, seq) =>
-        require(false, s"DTS device $name has $k = $seq, must be a single ResourceAddress!")
+        throw new Exception(s"DTS device $name has $k = $seq, must be a single ResourceAddress!")
     }
 
     val names =
@@ -211,7 +212,7 @@ class SimpleDevice(val devname: String, devcompat: Seq[String])
 
     deviceNamePlusAddress = name
 
-    Description(name, ListMap() ++ compat ++ int ++ clocks ++ names ++ regs)
+    Description(name, immutable.ListMap() ++ compat ++ int ++ clocks ++ names ++ regs)
   }
 }
 
@@ -226,7 +227,7 @@ class SimpleBus(devname: String, devcompat: Seq[String], offset: BigInt = 0)
     val ranges = resources("ranges").collect {
       case Binding(_, a: ResourceAddress) => ResourceMapping(a.address, offset, a.permissions)
     }
-    require(!ranges.isEmpty, s"SimpleBus $devname must set ranges")
+    require(ranges.nonEmpty, s"SimpleBus $devname must set ranges")
 
     val map = AddressRange.fromSets(ranges.flatMap(_.address))
     val minBase = map.map(_.base).min
@@ -243,7 +244,7 @@ class SimpleBus(devname: String, devcompat: Seq[String], offset: BigInt = 0)
     deviceNamePlusAddress = devname
 
     val Description(_, mapping) = super.describe(resources)
-    Description(s"${devname}@${minBase.toString(16)}", mapping ++ extra)
+    Description(s"$devname@${minBase.toString(16)}", mapping ++ extra)
   }
 
   def ranges = Seq(Resource(this, "ranges"))
@@ -254,7 +255,7 @@ class MemoryDevice extends Device with DeviceRegName {
   def describe(resources: ResourceBindings): Description = {
     Description(
       describeName("memory", resources),
-      ListMap(
+      immutable.ListMap(
         "reg" -> resources.map.filterKeys(DiplomacyUtils.regFilter).flatMap(_._2).map(_.value).toList,
         "device_type" -> Seq(ResourceString("memory"))
       )
@@ -286,7 +287,7 @@ trait BindingScope {
 
   private case class ExpandedValue(path: Seq[String], labels: Seq[String], value: Seq[ResourceValue])
   private lazy val eval: Unit = {
-    require(!LazyModule.getScope.isDefined, "May not evaluate binding while still constructing LazyModules")
+    require(LazyModule.getScope.isEmpty, "May not evaluate binding while still constructing LazyModules")
     parentScope.foreach { _.eval }
     resourceBindings = parentScope.map(_.resourceBindings).getOrElse(Nil)
     BindingScope.active = Some(this)
@@ -301,9 +302,9 @@ trait BindingScope {
     val labels = values_p.flatMap(_.labels)
     val keys = keys_p.groupBy(_.path.head).toList.map {
       case (key, seq) =>
-        (key -> makeTree(seq.map { x => x.copy(path = x.path.tail) }))
+        key -> makeTree(seq.map { x => x.copy(path = x.path.tail) })
     }
-    if (labels.isEmpty && keys.isEmpty) values else ResourceMap(SortedMap(keys: _*), labels) +: values
+    if (labels.isEmpty && keys.isEmpty) values else ResourceMap(immutable.SortedMap(keys: _*), labels) +: values
   }
 
   private def expand(path: Seq[String], values: Seq[ResourceValue]): Seq[ExpandedValue] = {
@@ -328,7 +329,7 @@ trait BindingScope {
     val addresses: List[(String, ResourceAddress)] = map.value.toList.flatMap {
       case (_, seq) =>
         seq.collect {
-          case y: ResourceAddress => (name -> y.copy(address = shift(y.address)))
+          case y: ResourceAddress => name -> y.copy(address = shift(y.address))
         }
     }
     // Recursively handle children only if they use addresses
@@ -343,7 +344,7 @@ trait BindingScope {
         }.flatten
     }
     // How do we handle this node?
-    val childAddresses = map.value.lift("ranges") match {
+    val childAddresses = map.value.get("ranges") match {
       // root typically is missing ranges; probe children anyway
       case None if path.size < skipRoot => mapChildren(offset)
       // no ranges -> don't probe children
@@ -353,12 +354,12 @@ trait BindingScope {
       // ranges x; + no children -> report ranges as addressable regions
       case Some(seq) if !haveChildAddresses =>
         seq.collect {
-          case ResourceMapping(addr, _, perm) => (name -> ResourceAddress(shift(addr), perm))
+          case ResourceMapping(addr, _, perm) => name -> ResourceAddress(shift(addr), perm)
         }
       // children + single ranges -> probe children at displaced offset
       case Some(Seq(ResourceMapping(addr, delta, perm))) => mapChildren(offset + delta)
       // multiple ranges + children -> don't know how to handle this
-      case x => { require(false, s"Unexpected value in ranges key: ${x}"); Nil }
+      case x => throw new Exception(s"Unexpected value in ranges key: $x")
     }
     addresses ++ childAddresses
   }
@@ -367,12 +368,12 @@ trait BindingScope {
   def bindingTree: ResourceMap = {
     eval
     val map:   Map[Device, ResourceBindings] = getResourceBindingsMap.map
-    val descs: HashMap[Device, Description] = HashMap.empty
+    val descs: mutable.HashMap[Device, Description] = mutable.HashMap.empty
     def getDesc(dev: Device): Description = {
       if (descs.contains(dev)) {
         descs(dev)
       } else {
-        val bindings = map.lift(dev).getOrElse(ResourceBindings())
+        val bindings = map.getOrElse(dev, ResourceBindings())
         val Description(name, mapping) = dev.describe(bindings)
         val fullName = dev.parent match {
           case None         => name
@@ -389,7 +390,7 @@ trait BindingScope {
         val tokens = name.split("/").toList
         expand(tokens, Seq(ResourceMap(mapping, Seq(d.label))))
     })
-    ResourceMap(SortedMap("/" -> tree))
+    ResourceMap(immutable.SortedMap("/" -> tree))
   }
 
   /** Generate the ResourceBindingsMap which stores each device's ResourceBindings
@@ -406,7 +407,7 @@ trait BindingScope {
   }
 
   /** Collect resource addresses from tree. */
-  def collectResourceAddresses = collect(2, Nil, 0, bindingTree)
+  def collectResourceAddresses: immutable.Seq[(String, ResourceAddress)] = collect(2, Nil, 0, bindingTree)
 }
 
 object BindingScope {
@@ -416,9 +417,10 @@ object BindingScope {
     case x => find(x.getParent)
   }
 
-  var bindingScopes = new collection.mutable.ArrayBuffer[BindingScope]()
+  val bindingScopes = new collection.mutable.ArrayBuffer[BindingScope]()
 
-  def add(bs: BindingScope) = BindingScope.bindingScopes.+=:(bs)
+  def add(bs: BindingScope): collection.mutable.ArrayBuffer[_root_.org.chipsalliance.utils.dts.BindingScope] =
+    BindingScope.bindingScopes.+=:(bs)
 }
 
 object ResourceBinding {
@@ -434,42 +436,34 @@ object ResourceBinding {
 }
 
 object ResourceAnchors {
-  val root = new Device {
-    def describe(resources: ResourceBindings): Description = {
-      val width = resources("width").map(_.value)
-      val model = resources("model").map(_.value)
-      val compat = resources("compat").map(_.value)
-      Description("/", Map("#address-cells" -> width, "#size-cells" -> width, "model" -> model, "compatible" -> compat))
-    }
+  val root: Device = (resources: ResourceBindings) => {
+    val width = resources("width").map(_.value)
+    val model = resources("model").map(_.value)
+    val compat = resources("compat").map(_.value)
+    Description("/", Map("#address-cells" -> width, "#size-cells" -> width, "model" -> model, "compatible" -> compat))
   }
 
-  val soc = new Device {
-    def describe(resources: ResourceBindings): Description = {
-      val width = resources("width").map(_.value)
-      val compat = resources("compat").map(_.value) :+ ResourceString("simple-bus")
-      Description(
-        "soc",
-        Map("#address-cells" -> width, "#size-cells" -> width, "compatible" -> compat, "ranges" -> Nil)
-      )
-    }
+  val soc: Device = (resources: ResourceBindings) => {
+    val width = resources("width").map(_.value)
+    val compat = resources("compat").map(_.value) :+ ResourceString("simple-bus")
+    Description(
+      "soc",
+      Map("#address-cells" -> width, "#size-cells" -> width, "compatible" -> compat, "ranges" -> Nil)
+    )
   }
 
-  val cpus = new Device {
-    def describe(resources: ResourceBindings): Description = {
-      val width = resources("width").map(_.value)
-      Description("cpus", Map("#address-cells" -> width, "#size-cells" -> Seq(ResourceInt(0))))
-    }
+  val cpus: Device = (resources: ResourceBindings) => {
+    val width = resources("width").map(_.value)
+    Description("cpus", Map("#address-cells" -> width, "#size-cells" -> Seq(ResourceInt(0))))
   }
 
-  val aliases = new Device {
-    def describe(resources: ResourceBindings): Description =
-      Description(
-        "aliases",
-        Map() ++
-          resources("uart").zipWithIndex.map {
-            case (Binding(_, value), i) =>
-              (s"serial${i}" -> Seq(value))
-          }
-      )
-  }
+  val aliases: Device = (resources: ResourceBindings) =>
+    Description(
+      "aliases",
+      Map() ++
+        resources("uart").zipWithIndex.map {
+          case (Binding(_, value), i) =>
+            s"serial$i" -> Seq(value)
+        }
+    )
 }

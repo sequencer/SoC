@@ -19,16 +19,16 @@ object DTS {
   private val nodeStartChars = (('a' to 'z') ++ ('A' to 'Z')).toSet
   private val nodeChars = (('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9') ++ Seq(',', '.', '_', '+', '-', '@')).toSet
   def legalNode(x: String): Boolean =
-    x == "/" || (!x.isEmpty && x.size < 48 && nodeStartChars.contains(x(0)) && x.forall(nodeChars.contains(_)))
+    x == "/" || (!x.isEmpty && x.length < 48 && nodeStartChars.contains(x(0)) && x.forall(nodeChars.contains))
 
   // the DTS spec does not list '-', but uses it everywhere ...
   private val propChars = (('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9') ++ Seq(',', '.', '_', '+', '?', '#', '-')).toSet
   def legalProperty(x: String): Boolean =
-    x == "/" || (!x.isEmpty && x.size < 32 && x.forall(propChars.contains(_)))
+    x == "/" || (!x.isEmpty && x.length < 32 && x.forall(propChars.contains))
 
   // The DTS spec doesn't say what is allowed in a string, so just use our own judgement
   private val strChars = (('#' to '[') ++ (']' to '~') ++ Seq(' ', '!')).toSet
-  def legalString(x: String): Boolean = x.forall(strChars.contains(_))
+  def legalString(x: String): Boolean = x.forall(strChars.contains)
 
   private case class Cells(
     parentAddress: Int,
@@ -40,7 +40,7 @@ object DTS {
   private def fmtCell(x: BigInt, cells: Int): Seq[String] = {
     val cellbits = 32
     val mask = (BigInt(1) << cellbits) - 1
-    (0 until cells).reverse.map { case i => "0x%x".format((x >> (i * cellbits)) & mask) }
+    (0 until cells).reverse.map(i => "0x%x".format((x >> (i * cellbits)) & mask))
   }
 
   private def fmtAddress(x: ResourceAddress, cells: Cells): Seq[String] = {
@@ -68,10 +68,10 @@ object DTS {
   }
 
   private def fmtMap(x: ResourceMap, indent: String, cells: Cells): Seq[String] = {
-    val (nodes, props) = x.value.partition(_ match {
+    val (nodes, props) = x.value.partition {
       case (_, Seq(ResourceMap(_, _))) => true
       case _                           => false
-    })
+    }
 
     def getInt(x: ResourceValue) = x match {
       case ResourceInt(value) => Some(value.toInt)
@@ -89,43 +89,34 @@ object DTS {
 
     props.flatMap {
       case (k, seq) =>
-        require(legalProperty(k), s"The string '${k}' is not a legal DTS property name")
+        require(legalProperty(k), s"The string '$k' is not a legal DTS property name")
         seq.headOption match {
           case None => Seq(indent, k, ";\n")
-          case Some(ResourceString(_)) => {
-            seq.foreach { r =>
-              r match {
-                case ResourceString(_) => Unit
-                case _                 => require(false, s"The property '${k}' has values of conflicting type: ${seq}")
-              }
+          case Some(ResourceString(_)) =>
+            seq.foreach {
+              case ResourceString(_) => Unit
+              case _                 => throw new Exception(s"The property '$k' has values of conflicting type: $seq")
             }
             Seq(indent, k, " = ", seq.flatMap(z => helper(z, "", myCells)).mkString(", "), ";\n")
-          }
-          case Some(ResourceAlias(_)) => {
-            seq.foreach { r =>
-              r match {
-                case ResourceAlias(_) => Unit
-                case _                => require(false, s"The property '${k}' has values of conflicting type: ${seq}")
-              }
+          case Some(ResourceAlias(_)) =>
+            seq.foreach {
+              case ResourceAlias(_) => Unit
+              case _                => throw new Exception(s"The property '$k' has values of conflicting type: $seq")
             }
             Seq(indent, k, " = ", seq.flatMap(z => helper(z, "", myCells)).mkString(", "), ";\n")
-          }
-          case Some(_) => {
-            seq.foreach { r =>
-              r match {
-                case ResourceMap(_, _) => require(false, s"The property '${k}' has values of conflicting type: ${seq}")
-                case ResourceString(_) => require(false, s"The property '${k}' has values of conflicting type: ${seq}")
-                case ResourceAlias(_)  => require(false, s"The property '${k}' has values of conflicting type: ${seq}")
-                case _                 => Unit
-              }
+          case Some(_) =>
+            seq.foreach {
+              case ResourceMap(_, _) => throw new Exception(s"The property '$k' has values of conflicting type: $seq")
+              case ResourceString(_) => throw new Exception(s"The property '$k' has values of conflicting type: $seq")
+              case ResourceAlias(_)  => throw new Exception(s"The property '$k' has values of conflicting type: $seq")
+              case _                 => Unit
             }
             Seq(indent, k, " = <", seq.flatMap(z => helper(z, "", myCells)).mkString(" "), ">;\n")
-          }
         }
     }.toList ++
       nodes.flatMap {
         case (k, Seq(s: ResourceMap)) =>
-          require(legalNode(k), s"The string '${k}' is not a legal DTS node name")
+          require(legalNode(k), s"The string '$k' is not a legal DTS node name")
           Seq(indent) ++ s.labels.map(_ + ": ").filter(_ => !indent.isEmpty) ++ // labels on root not allowed
             Seq(k, " {\n") ++ helper(s, indent + "\t", myCells) ++ Seq(indent, "};\n")
       }
@@ -149,8 +140,8 @@ object DTB {
     val outstream = new ByteArrayOutputStream
     val proc = "dtc -O dtb" #< instream #> outstream
     require(proc.! == 0, "Failed to run dtc; is it in your path?")
-    instream.close
-    outstream.close
+    instream.close()
+    outstream.close()
     DTB(outstream.toByteArray)
   }
 }
