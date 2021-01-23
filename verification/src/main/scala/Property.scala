@@ -4,7 +4,7 @@ package org.chipsalliance.utils.verification
 
 import chisel3._
 import chisel3.internal.sourceinfo.SourceInfo
-import chisel3.util.{ReadyValidIO}
+import chisel3.util.ReadyValidIO
 
 sealed abstract class PropertyType(name: String) {
   override def toString: String = name
@@ -28,7 +28,7 @@ case class CoverPropertyParameters(
   label:   String = "",
   message: String = "")
     extends BasePropertyParameters {
-  val pType = PropertyType.Cover
+  val pType: PropertyType = PropertyType.Cover
 }
 
 abstract class BasePropertyLibrary {
@@ -78,7 +78,7 @@ class CrossProperty(cond: Seq[Seq[CoverBoolean]], exclude: Seq[Seq[String]], mes
       Seq(c1)
     } else {
       c2.map((c: CoverBoolean) => {
-        new CoverBoolean(c1.cond && c.cond, c1.labels ++ c.labels)
+        CoverBoolean(c1.cond && c.cond, c1.labels ++ c.labels)
       })
     }
   }
@@ -121,7 +121,7 @@ class CrossProperty(cond: Seq[Seq[CoverBoolean]], exclude: Seq[Seq[String]], mes
     crossProperties(cond)
       .filter(c => !SeqsinSequence(c.labels, exclude))
       .map((c: CoverBoolean) => {
-        new CoverPropertyParameters(
+        CoverPropertyParameters(
           cond = c.cond,
           label = c.labels.reduce((s1: String, s2: String) => { s1 + "_" + s2 }),
           message = message + " " + c.labels.map("<" + _ + ">").reduce((s1: String, s2: String) => { s1 + " X " + s2 })

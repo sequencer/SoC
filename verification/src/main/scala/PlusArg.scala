@@ -4,7 +4,7 @@ package org.chipsalliance.utils.verification
 
 import chisel3._
 import chisel3.experimental._
-import chisel3.util.{HasBlackBoxInline, HasBlackBoxResource, HasExtModuleInline}
+import chisel3.util.HasExtModuleInline
 
 @deprecated("This will be removed in Rocket Chip 2020.08", "Rocket Chip 2020.05")
 case class PlusArgInfo(default: BigInt, docstring: String)
@@ -33,19 +33,13 @@ trait Doctypeable[A] {
 object Doctypes {
 
   /** Converts an Int => "INT" */
-  implicit val intToDoctype = new Doctypeable[Int] {
-    def toDoctype(a: Option[Int]) = "INT"
-  }
+  implicit val intToDoctype: Doctypeable[Int] = (a: Option[Int]) => "INT"
 
   /** Converts a BigInt => "INT" */
-  implicit val bigIntToDoctype = new Doctypeable[BigInt] {
-    def toDoctype(a: Option[BigInt]) = "INT"
-  }
+  implicit val bigIntToDoctype: Doctypeable[BigInt] = (a: Option[BigInt]) => "INT"
 
   /** Converts a String => "STRING" */
-  implicit val stringToDoctype = new Doctypeable[String] {
-    def toDoctype(a: Option[String]) = "STRING"
-  }
+  implicit val stringToDoctype: Doctypeable[String] = (a: Option[String]) => "STRING"
 
 }
 
@@ -58,7 +52,7 @@ class plusarg_reader(val format: String, val default: BigInt, val docstring: Str
       )
     )
     with HasExtModuleInline {
-  val out = IO(Output(UInt(width.W)))
+  val out: UInt = IO(Output(UInt(width.W)))
   setInline(
     "plusarg_reader",
     """// See LICENSE.SiFive for license details.
@@ -94,14 +88,14 @@ class plusarg_reader(val format: String, val default: BigInt, val docstring: Str
 /* This wrapper class has no outputs, making it clear it is a simulation-only construct */
 class PlusArgTimeout(val format: String, val default: BigInt, val docstring: String, val width: Int)
     extends MultiIOModule {
-  val count = IO(Input(UInt(width.W)))
-  val max = Module(new plusarg_reader(format, default, docstring, width)).out
+  val count: UInt = IO(Input(UInt(width.W)))
+  val max:   UInt = Module(new plusarg_reader(format, default, docstring, width)).out
   when(max > 0.U) {
     assert(count < max, s"Timeout exceeded: $docstring")
   }
 }
 
-import Doctypes._
+import org.chipsalliance.utils.verification.Doctypes._
 
 object PlusArg {
 
@@ -152,10 +146,7 @@ object PlusArgArtefacts {
     case (arg, info) =>
       s"""|$tab+$arg=${info.doctype}\\n\\
           |$tab${" " * 20}${info.docstring}\\n\\
-          |""".stripMargin ++ info.default.map {
-        case default =>
-          s"$tab${" " * 22}(default=${default})\\n\\\n"
-      }.getOrElse("")
+          |""".stripMargin ++ info.default.map(default => s"$tab${" " * 22}(default=$default)\\n\\\n").getOrElse("")
   }.toSeq.mkString("\\n\\\n") ++ "\""
 
   /* From plus args, generate a char array of their names */

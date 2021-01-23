@@ -6,6 +6,8 @@ import chisel3.VecInit
 import chisel3.util.Cat
 import chisel3.internal.sourceinfo.{SourceInfo, SourceLine}
 
+import scala.collection.mutable
+
 sealed abstract class MonitorDirection(name: String) {
   override def toString: String = name
   def flip: MonitorDirection
@@ -46,8 +48,8 @@ object PropertyClass {
 }
 
 object Property {
-  var prop_name_set = collection.mutable.Set[String]()
-  def reset_prop_name: Unit = prop_name_set = collection.mutable.Set[String]()
+  var prop_name_set:     mutable.Set[String] = collection.mutable.Set[String]()
+  def reset_prop_name(): Unit = prop_name_set = collection.mutable.Set[String]()
 
   def apply(
     dir:         MonitorDirection,
@@ -60,32 +62,31 @@ object Property {
     implicit sourceInfo: SourceInfo
   ): Unit = {
     val line_info = sourceInfo match {
-      case SourceLine(filename, line, col) => s"${filename}_L${line}_C${col}_I${idx}".replace('.', '_')
+      case SourceLine(filename, line, col) => s"${filename}_L${line}_C${col}_I$idx".replace('.', '_')
       case _                               => ""
     }
     val proposed_src = if (custom_name == "") prop_type.toString + "_" + line_info else custom_name
 
-    val src_wrap = s"@[${proposed_src}]"
     if (dir == MonitorDirection.Monitor) {
       when(!cond) {
-        printf(s"assert:${proposed_src}:${prop_type.toString} ${message + "_" + line_info}")
+        printf(s"assert:$proposed_src:${prop_type.toString} ${message + "_" + line_info}")
       }
     } else if (dir == MonitorDirection.Receiver) {
       when(!cond) {
-        printf(s"assert:${proposed_src}:${prop_type.toString} ${message + "_" + line_info}")
+        printf(s"assert:$proposed_src:${prop_type.toString} ${message + "_" + line_info}")
       }
     } else if (dir == MonitorDirection.Driver) {
       when(!cond) {
-        printf(s"assume:${proposed_src}:${prop_type.toString} ${message + "_" + line_info}")
+        printf(s"assume:$proposed_src:${prop_type.toString} ${message + "_" + line_info}")
       }
     } else if (dir == MonitorDirection.Cover) {
       if (prop_type == PropertyClass.CoverDisableMonitor) {
         when(cond) { //We want to assert that the condition is never true, which is opposite of a normal assertion
-          printf(s"assert:${proposed_src}:${prop_type.toString} ${message + "_" + line_info}")
+          printf(s"assert:$proposed_src:${prop_type.toString} ${message + "_" + line_info}")
         }
       } else {
         when(cond) {
-          printf(s"cover:${proposed_src}:${prop_type.toString} ${message + "_" + line_info}")
+          printf(s"cover:$proposed_src:${prop_type.toString} ${message + "_" + line_info}")
         }
       }
     }
@@ -141,22 +142,22 @@ object Property {
     Property(dir, cond, crosscond, message, prop_type, "", "")
   }
   def apply(cond: Bool)(implicit sourceInfo: SourceInfo): Unit = {
-    Property(MonitorDirection.Monitor, cond, "Sanity Property", PropertyClass.LocalRTL, "", "")
+    Property(MonitorDirection.Monitor, cond, "Sanity Property", PropertyClass.LocalRTL)
   }
 }
 
 object SourceGet {
   def get_line_num(implicit sourceInfo: SourceInfo): String = {
     val line_info = sourceInfo match {
-      case SourceLine(filename, line, col) => line.toString
-      case _                               => ""
+      case SourceLine(_, line, _) => line.toString
+      case _                      => ""
     }
     line_info
   }
 }
 
 object ResetUtils {
-  def inactive_output_override[T <: Data](inactive_length: Int)(sigs: T, override_assn: (T) => Unit): Unit = {
+  def inactive_output_override[T <: Data](inactive_length: Int)(sigs: T, override_assn: T => Unit): Unit = {
     require(inactive_length >= 0)
 
     if (inactive_length > 0) {
@@ -172,7 +173,7 @@ object ResetUtils {
 
 object OneHot0Prop {
   def apply(in: Seq[Bool]): Bool = {
-    if (in.size == 0) { true.B }
+    if (in.isEmpty) { true.B }
     else { apply(Cat(in.reverse)) }
   }
   def apply(in: Vec[Bool]): Bool = {
@@ -192,7 +193,7 @@ object OneHot0Prop {
 }
 object OneHotProp {
   def apply(in: Seq[Bool]): Bool = {
-    if (in.size == 0) { false.B }
+    if (in.isEmpty) { false.B }
     else { apply(Cat(in.reverse)) }
   }
   def apply(in: Vec[Bool]): Bool = {
@@ -229,7 +230,7 @@ object OneHotPriorityEncoder {
 
 object IfThen {
   def apply(if_clause: Bool, then_clause: Bool): Bool = {
-    !(if_clause) || then_clause
+    !if_clause || then_clause
   }
 }
 
@@ -246,12 +247,12 @@ object TernaryIf {
 }
 
 object Case {
-  def apply[T <: Data, R <: Data](case_var: T, sel_ret: Seq[Tuple2[T, R]]): R = {
-    val sel_vec = sel_ret.map((sel_ret_idv: Tuple2[T, R]) => {
+  def apply[T <: Data, R <: Data](case_var: T, sel_ret: Seq[(T, R)]): R = {
+    val sel_vec = sel_ret.map((sel_ret_idv: (T, R)) => {
       val (select, ret_val) = sel_ret_idv
       TernaryIf(case_var.asUInt === select.asUInt, ret_val.asUInt, 0.U)
     })
-    sel_vec.reduce(_ | _).asTypeOf(sel_ret(0)._2)
+    sel_vec.reduce(_ | _).asTypeOf(sel_ret.head._2)
   }
 }
 
