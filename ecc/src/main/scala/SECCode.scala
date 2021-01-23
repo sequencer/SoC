@@ -8,20 +8,20 @@ class SECCode extends Code {
 
   // SEC codes may or may not be poisonous depending on the length
   // If the code is perfect, every non-codeword is correctable
-  def poisonous(n: Int) = !isPow2(n + 1)
+  def poisonous(n: Int): Boolean = !isPow2(n + 1)
 
   def width(k: Int): Int = {
     val m = log2Floor(k) + 1
     k + m + (if ((1 << m) < m + k + 1) 1 else 0)
   }
 
-  def eccIndices(w0: Int) = {
+  def eccIndices(w0: Int): Seq[Int] = {
     (0 until width(w0)).collect {
       case i if i >= w0 => i
     }
   }
 
-  def swizzle(x: UInt) = {
+  def swizzle(x: UInt): UInt = {
     val k = x.getWidth
     val n = width(k)
     Cat(0.U((n - k).W), x)
@@ -58,32 +58,32 @@ class SECCode extends Code {
     (hamm2sys, sys2hamm, syndrome _)
   }
 
-  def encode(x: UInt, poison: Bool = false.B) = {
+  def encode(x: UInt, poison: Bool = false.B): UInt = {
     val k = x.getWidth
     val n = width(k)
     val (_, _, syndrome) = impl(n, k)
 
-    require((poison.isLit && poison.litValue == 0) || poisonous(n), s"SEC code of length ${n} cannot be poisoned")
+    require((poison.isLit && poison.litValue == 0) || poisonous(n), s"SEC code of length $n cannot be poisoned")
 
     /* By setting the entire syndrome on poison, the corrected bit falls off the end of the code */
     val syndromeUInt = VecInit.tabulate(n - k) { j => (syndrome(j)(k - 1, 0) & x).xorR ^ poison }.asUInt
     Cat(syndromeUInt, x)
   }
 
-  def decode(y: UInt) = new Decoding {
-    val n = y.getWidth
-    val k = n - log2Ceil(n)
+  def decode(y: UInt): Decoding = new Decoding {
+    val n: Int = y.getWidth
+    val k: Int = n - log2Ceil(n)
     val (_, sys2hamm, syndrome) = impl(n, k)
 
-    val syndromeUInt = VecInit.tabulate(n - k) { j => (syndrome(j) & y).xorR }.asUInt
+    val syndromeUInt: UInt = VecInit.tabulate(n - k) { j => (syndrome(j) & y).xorR }.asUInt
 
-    val hammBadBitOH = UIntToOH(syndromeUInt, n + 1)
-    val sysBadBitOH = VecInit.tabulate(k) { i => hammBadBitOH(sys2hamm(i)) }.asUInt
+    val hammBadBitOH: UInt = UIntToOH(syndromeUInt, n + 1)
+    val sysBadBitOH:  UInt = VecInit.tabulate(k) { i => hammBadBitOH(sys2hamm(i)) }.asUInt
 
-    val uncorrected = y(k - 1, 0)
-    val corrected = uncorrected ^ sysBadBitOH
-    val correctable = syndromeUInt.orR
-    val uncorrectable = if (poisonous(n)) { syndromeUInt > n.U }
+    val uncorrected: UInt = y(k - 1, 0)
+    val corrected:   UInt = uncorrected ^ sysBadBitOH
+    val correctable: Bool = syndromeUInt.orR
+    val uncorrectable: Bool = if (poisonous(n)) { syndromeUInt > n.U }
     else { false.B }
   }
 }

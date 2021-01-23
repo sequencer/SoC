@@ -6,9 +6,9 @@ class IdentityCode extends Code {
   def canDetect = false
   def canCorrect = false
 
-  def width(w0:         Int) = w0
+  def width(w0:         Int): Int = w0
   def eccIndices(width: Int) = Seq.empty[Int]
-  def encode(x: UInt, poison: Bool = false.B) = {
+  def encode(x: UInt, poison: Bool = false.B): UInt = {
     require(poison.isLit && poison.litValue == 0, "IdentityCode can not be poisoned")
     x
   }
