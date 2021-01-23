@@ -3,26 +3,25 @@
 package org.chipsalliance.utils.regmapper
 
 import chisel3._
-import chisel3.util.{Decoupled, DecoupledIO, Irrevocable}
-
+import chisel3.util.{Decoupled, DecoupledIO, Irrevocable, IrrevocableIO}
 import org.chipsalliance.utils.crossing.{AsyncQueue, AsyncQueueParams, AsyncResetRegVec}
 
 // A very simple flow control state machine, run in the specified clock domain
 class BusyRegisterCrossing extends Module {
   class BusyRegisterCrossingBundle extends Bundle {
-    val bypass = Input(Bool())
-    val master_request_valid = Input(Bool())
-    val master_request_ready = Output(Bool())
-    val master_response_valid = Output(Bool())
-    val master_response_ready = Input(Bool())
-    val crossing_request_valid = Output(Bool())
-    val crossing_request_ready = Input(Bool())
+    val bypass:                 Bool = Input(Bool())
+    val master_request_valid:   Bool = Input(Bool())
+    val master_request_ready:   Bool = Output(Bool())
+    val master_response_valid:  Bool = Output(Bool())
+    val master_response_ready:  Bool = Input(Bool())
+    val crossing_request_valid: Bool = Output(Bool())
+    val crossing_request_ready: Bool = Input(Bool())
     // ... no crossing_response_ready; we are always ready
   }
-  val io = IO(new BusyRegisterCrossingBundle)
+  val io: BusyRegisterCrossingBundle = IO(new BusyRegisterCrossingBundle)
 
-  val busy = RegInit(false.B)
-  val bypass = Reg(Bool())
+  val busy:   Bool = RegInit(false.B)
+  val bypass: Bool = Reg(Bool())
 
   when(io.crossing_request_ready || Mux(busy, bypass, io.bypass)) {
     busy := Mux(busy, !io.master_response_ready, io.master_request_valid)
@@ -39,12 +38,12 @@ class BusyRegisterCrossing extends Module {
 
 class RegisterCrossingAssertion extends Module {
   class RegisterCrossingAssertionBundle extends Bundle {
-    val master_bypass = Input(Bool())
-    val slave_reset = Input(Bool())
+    val master_bypass: Bool = Input(Bool())
+    val slave_reset:   Bool = Input(Bool())
   }
-  val io = IO(new RegisterCrossingAssertionBundle)
+  val io: RegisterCrossingAssertionBundle = IO(new RegisterCrossingAssertionBundle)
 
-  val up = RegInit(false.B)
+  val up: Bool = RegInit(false.B)
   up := !io.slave_reset
 
   assert(io.master_bypass || !up || !io.slave_reset)
@@ -52,10 +51,10 @@ class RegisterCrossingAssertion extends Module {
 
 // RegField should support connecting to one of these
 class RegisterWriteIO[T <: Data](gen: T) extends Bundle {
-  val request = Flipped(Decoupled(gen))
-  val response = Irrevocable(Bool()) // ignore .bits
+  val request:  DecoupledIO[T] = Flipped(Decoupled(gen))
+  val response: IrrevocableIO[Bool] = Irrevocable(Bool()) // ignore .bits
 
-  override def cloneType = new RegisterWriteIO(gen).asInstanceOf[this.type]
+  override def cloneType: RegisterWriteIO.this.type = new RegisterWriteIO(gen).asInstanceOf[this.type]
 }
 
 // To turn off=>on a domain:
@@ -80,23 +79,23 @@ class RegisterWriteIO[T <: Data](gen: T) extends Bundle {
 
 class RegisterWriteCrossingIO[T <: Data](gen: T) extends Bundle {
   // Master clock domain
-  val master_clock = Input(Clock())
-  val master_reset = Input(Bool())
+  val master_clock: Clock = Input(Clock())
+  val master_reset: Bool = Input(Bool())
   val master_port = new RegisterWriteIO(gen)
   // Bypass requests from the master to be noops
-  val master_bypass = Input(Bool())
+  val master_bypass: Bool = Input(Bool())
   // Slave clock domain
-  val slave_clock = Input(Clock())
-  val slave_reset = Input(Bool())
-  val slave_register = Output(gen)
-  val slave_valid = Output(Bool()) // is high on 1st cycle slave_register has a new value
+  val slave_clock:    Clock = Input(Clock())
+  val slave_reset:    Bool = Input(Bool())
+  val slave_register: T = Output(gen)
+  val slave_valid:    Bool = Output(Bool()) // is high on 1st cycle slave_register has a new value
 }
 
 class RegisterWriteCrossing[T <: Data](gen: T, sync: Int = 3) extends Module {
-  val io = IO(new RegisterWriteCrossingIO(gen))
+  val io: RegisterWriteCrossingIO[T] = IO(new RegisterWriteCrossingIO(gen))
   // The crossing must only allow one item inflight at a time
-  val control = Module(new BusyRegisterCrossing)
-  val crossing = Module(new AsyncQueue(gen, AsyncQueueParams.singleton(sync)))
+  val control:  BusyRegisterCrossing = Module(new BusyRegisterCrossing)
+  val crossing: AsyncQueue[T] = Module(new AsyncQueue(gen, AsyncQueueParams.singleton(sync)))
 
   control.clock := io.master_clock
   control.reset := io.master_reset
@@ -119,7 +118,7 @@ class RegisterWriteCrossing[T <: Data](gen: T, sync: Int = 3) extends Module {
   io.slave_valid := crossing.io.deq.valid
   io.slave_register := crossing.io.deq.bits
 
-  val assertion = Module(new RegisterCrossingAssertion)
+  val assertion: RegisterCrossingAssertion = Module(new RegisterCrossingAssertion)
   assertion.clock := io.master_clock
   assertion.reset := io.master_reset
   assertion.io.master_bypass := io.master_bypass
@@ -128,30 +127,30 @@ class RegisterWriteCrossing[T <: Data](gen: T, sync: Int = 3) extends Module {
 
 // RegField should support connecting to one of these
 class RegisterReadIO[T <: Data](gen: T) extends Bundle {
-  val request = Flipped(Decoupled(Bool())) // ignore .bits
-  val response = Irrevocable(gen)
+  val request:  DecoupledIO[Bool] = Flipped(Decoupled(Bool())) // ignore .bits
+  val response: IrrevocableIO[T] = Irrevocable(gen)
 
-  override def cloneType = new RegisterReadIO(gen).asInstanceOf[this.type]
+  override def cloneType: RegisterReadIO.this.type = new RegisterReadIO(gen).asInstanceOf[this.type]
 }
 
 class RegisterReadCrossingIO[T <: Data](gen: T) extends Bundle {
   // Master clock domain
-  val master_clock = Input(Clock())
-  val master_reset = Input(Bool())
+  val master_clock: Clock = Input(Clock())
+  val master_reset: Bool = Input(Bool())
   val master_port = new RegisterReadIO(gen)
   // Bypass requests from the master to be noops
-  val master_bypass = Input(Bool())
+  val master_bypass: Bool = Input(Bool())
   // Slave clock domain
-  val slave_clock = Input(Clock())
-  val slave_reset = Input(Bool())
-  val slave_register = Input(gen)
+  val slave_clock:    Clock = Input(Clock())
+  val slave_reset:    Bool = Input(Bool())
+  val slave_register: T = Input(gen)
 }
 
 class RegisterReadCrossing[T <: Data](gen: T, sync: Int = 3) extends Module {
-  val io = IO(new RegisterReadCrossingIO(gen))
+  val io: RegisterReadCrossingIO[T] = IO(new RegisterReadCrossingIO(gen))
   // The crossing must only allow one item inflight at a time
-  val control = Module(new BusyRegisterCrossing)
-  val crossing = Module(new AsyncQueue(gen, AsyncQueueParams.singleton(sync)))
+  val control:  BusyRegisterCrossing = Module(new BusyRegisterCrossing)
+  val crossing: AsyncQueue[T] = Module(new AsyncQueue(gen, AsyncQueueParams.singleton(sync)))
 
   control.clock := io.master_clock
   control.reset := io.master_reset
@@ -173,7 +172,7 @@ class RegisterReadCrossing[T <: Data](gen: T, sync: Int = 3) extends Module {
   crossing.io.enq.valid := true.B
   crossing.io.enq.bits := io.slave_register
 
-  val assertion = Module(new RegisterCrossingAssertion)
+  val assertion: RegisterCrossingAssertion = Module(new RegisterCrossingAssertion)
   assertion.clock := io.master_clock
   assertion.reset := io.master_reset
   assertion.io.master_bypass := io.master_bypass

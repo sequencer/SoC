@@ -129,7 +129,7 @@ case class AddressBlockInfo(
   range: BigInt, // Size of the address block (in bytes)
   width: Int // assumed access size of registers in this block (e.g. 32 or 64 bits).
   // Again this is ONLY documentation. RegField hardware generation ignores this.
-);
+)
 
 // Add the AddressBlock to a list of RegFields' descriptions. If they have no RegFieldDesc,
 // this has no effect.

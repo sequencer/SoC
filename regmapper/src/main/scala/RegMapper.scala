@@ -3,29 +3,30 @@
 package org.chipsalliance.utils.regmapper
 
 import chisel3._
-import diplomacy._
 import chisel3.internal.sourceinfo.SourceInfo
-import chisel3.util.{Cat, Decoupled, DecoupledIO, FillInterleaved, Queue, UIntToOH}
+import chisel3.util._
 import org.chipsalliance.utils.addressing.AddressDecoder
 import org.chipsalliance.utils.misc.{BundleFieldBase, BundleMap, MuxSeq, ReduceOthers}
 import org.chipsalliance.utils.verification.cover
+
+import scala.annotation.tailrec
 
 // A bus agnostic register interface to a register-based device
 
 case class RegMapperParams(indexBits: Int, maskBits: Int, extraFields: Seq[BundleFieldBase] = Nil)
 
 class RegMapperInput(val params: RegMapperParams) extends Bundle {
-  val read = Bool()
-  val index = UInt(params.indexBits.W)
-  val data = UInt((params.maskBits * 8).W)
-  val mask = UInt(params.maskBits.W)
-  val extra = BundleMap(params.extraFields)
+  val read:  Bool = Bool()
+  val index: UInt = UInt(params.indexBits.W)
+  val data:  UInt = UInt((params.maskBits * 8).W)
+  val mask:  UInt = UInt(params.maskBits.W)
+  val extra: BundleMap = BundleMap(params.extraFields)
 }
 
 class RegMapperOutput(val params: RegMapperParams) extends Bundle {
-  val read = Bool()
-  val data = UInt((params.maskBits * 8).W)
-  val extra = BundleMap(params.extraFields)
+  val read:  Bool = Bool()
+  val data:  UInt = UInt((params.maskBits * 8).W)
+  val extra: BundleMap = BundleMap(params.extraFields)
 }
 
 object RegMapper {
@@ -38,7 +39,7 @@ object RegMapper {
     mapping:     RegField.Map*
   )(
     implicit sourceInfo: SourceInfo
-  ) = {
+  ): DecoupledIO[RegMapperOutput] = {
     // Filter out zero-width fields
     val bytemap = mapping.toList.map { case (offset, fields) => (offset, fields.filter(_.width != 0)) }
 
@@ -46,16 +47,16 @@ object RegMapper {
     bytemap.foreach { byte => require(byte._1 >= 0) }
 
     // Transform all fields into bit offsets Seq[(bit, field)]
-    val bitmap = bytemap.map {
+    val bitmap = bytemap.flatMap {
       case (byte, fields) =>
         val bits = fields.scanLeft(byte * 8)(_ + _.width).init
         bits.zip(fields)
-    }.flatten.sortBy(_._1)
+    }.sortBy(_._1)
 
     // Detect overlaps
-    (bitmap.init.zip(bitmap.tail)).foreach {
+    bitmap.init.zip(bitmap.tail).foreach {
       case ((lbit, lfield), (rbit, rfield)) =>
-        require(lbit + lfield.width <= rbit, s"Register map overlaps at bit ${rbit}.")
+        require(lbit + lfield.width <= rbit, s"Register map overlaps at bit $rbit.")
     }
 
     // Group those fields into bus words Map[word, List[(bit, field)]]
@@ -71,31 +72,32 @@ object RegMapper {
     front.bits := in.bits
 
     // Must this device pipeline the control channel?
-    val pipelined = wordmap.values.map(_.map(_._2.pipelined)).flatten.reduce(_ || _)
+    val pipelined = wordmap.values.flatMap(_.map(_._2.pipelined)).reduce(_ || _)
     val depth = concurrency
     require(depth >= 0)
     require(!pipelined || depth > 0, "Register-based device with request/response handshaking needs concurrency > 0")
     val back = if (depth > 0) Queue(front, depth) else front
 
     // Convert to and from Bits
+    @tailrec
     def toBits(x: Int, tail: List[Boolean] = List.empty): List[Boolean] =
       if (x == 0) tail.reverse else toBits(x >> 1, ((x & 1) == 1) :: tail)
     def ofBits(bits: List[Boolean]) = bits.foldRight(0) { case (x, y) => (if (x) 1 else 0) | y << 1 }
 
     // Find the minimal mask that can decide the register map
     val mask = AddressDecoder(wordmap.keySet.toList)
-    val maskMatch = ~mask.U(inBits.W)
-    val maskFilter = toBits(mask)
-    val maskBits = maskFilter.filter(x => x).size
+    val maskMatch:  UInt = (~mask.U(inBits.W)).asUInt()
+    val maskFilter: List[Boolean] = toBits(mask)
+    val maskBits = maskFilter.count(x => x)
 
     // Calculate size and indexes into the register map
     val regSize = 1 << maskBits
-    def regIndexI(x: Int) = ofBits((maskFilter.zip(toBits(x))).filter(_._1).map(_._2))
+    def regIndexI(x: Int) = ofBits(maskFilter.zip(toBits(x)).filter(_._1).map(_._2))
     def regIndexU(x: UInt) = if (maskBits == 0) 0.U
     else
-      Cat((maskFilter.zip(x.asBools)).filter(_._1).map(_._2).reverse)
+      Cat(maskFilter.zip(x.asBools).filter(_._1).map(_._2).reverse)
 
-    val findex = front.bits.index & maskMatch
+    val findex = (front.bits.index & maskMatch).asUInt()
     val bindex = back.bits.index & maskMatch
 
     // Protection flag for undefined registers
@@ -103,7 +105,7 @@ object RegMapper {
     val oRightReg = Array.fill(regSize) { true.B }
 
     // Transform the wordmap into minimal decoded indexes, Seq[(index, bit, field)]
-    val flat = wordmap.toList.map {
+    val flat = wordmap.toList.flatMap {
       case (word, fields) =>
         val index = regIndexI(word)
         if (undefZero) {
@@ -118,12 +120,12 @@ object RegMapper {
             // println(s"Reg ${word}: [${off}, ${off+field.width})")
             require(
               off + field.width <= bytes * 8,
-              s"Field at word ${word}*(${bytes}B) has bits [${off}, ${off + field.width}), which exceeds word limit."
+              s"Field at word $word*(${bytes}B) has bits [$off, ${off + field.width}), which exceeds word limit."
             )
         }
         // println("mapping 0x%x -> 0x%x for 0x%x/%d".format(word, index, mask, maskBits))
         fields.map { case (bit, field) => (index, bit - 8 * bytes * word, field) }
-    }.flatten
+    }
 
     // Forward declaration of all flow control signals
     val rivalid = Wire(Vec(flat.size, Bool()))
@@ -145,7 +147,7 @@ object RegMapper {
     val backMask = FillInterleaved(8, back.bits.mask)
 
     // Connect the fields
-    for (i <- 0 until flat.size) {
+    for (i <- flat.indices) {
       val (reg, low, field) = flat(i)
       val high = low + field.width - 1
       // Confirm that no register is too big
@@ -200,7 +202,7 @@ object RegMapper {
       MuxSeq(
         index,
         true.B,
-        ((select.zip(guard)).zip(flow)).map {
+        select.zip(guard).zip(flow).map {
           case ((s, g), f) =>
             val out = Wire(Bool())
             ReduceOthers((out, valid && s && g) +: f)

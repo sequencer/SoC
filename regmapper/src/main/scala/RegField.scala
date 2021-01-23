@@ -4,11 +4,11 @@ package org.chipsalliance.utils.regmapper
 
 import chisel3._
 import chisel3.util.{DecoupledIO, ReadyValidIO}
-
 import org.json4s.JsonDSL._
 import org.json4s.JsonAST.JValue
-
 import org.chipsalliance.utils.crossing.SimpleRegIO
+
+import scala.language.implicitConversions
 
 case class RegReadFn private (combinational: Boolean, fn: (Bool, Bool) => (Bool, Bool, UInt))
 object RegReadFn {
@@ -17,7 +17,7 @@ object RegReadFn {
   // all other combinational dependencies forbidden (e.g. ovalid <= ivalid)
   // effects must become visible on the cycle after ovalid && oready
   // data is only inspected when ovalid && oready
-  implicit def apply(x: (Bool, Bool) => (Bool, Bool, UInt)) =
+  implicit def apply(x: (Bool, Bool) => (Bool, Bool, UInt)): RegReadFn =
     new RegReadFn(false, x)
   implicit def apply(x: RegisterReadIO[UInt]): RegReadFn =
     RegReadFn((ivalid, oready) => {
@@ -28,7 +28,7 @@ object RegReadFn {
   // (ready: Bool) => (valid: Bool, data: UInt)
   // valid must not combinationally depend on ready
   // effects must become visible on the cycle after valid && ready
-  implicit def apply(x: Bool => (Bool, UInt)) =
+  implicit def apply(x: Bool => (Bool, UInt)): RegReadFn =
     new RegReadFn(
       true,
       {
@@ -52,7 +52,7 @@ object RegWriteFn {
   // all other combinational dependencies forbidden (e.g. ovalid <= ivalid)
   // effects must become visible on the cycle after ovalid && oready
   // data should only be used for an effect when ivalid && iready
-  implicit def apply(x: (Bool, Bool, UInt) => (Bool, Bool)) =
+  implicit def apply(x: (Bool, Bool, UInt) => (Bool, Bool)): RegWriteFn =
     new RegWriteFn(false, x)
   implicit def apply(x: RegisterWriteIO[UInt]): RegWriteFn =
     RegWriteFn((ivalid, oready, data) => {
@@ -64,7 +64,7 @@ object RegWriteFn {
   // (valid: Bool, data: UInt) => (ready: Bool)
   // ready may combinationally depend on data (but not valid)
   // effects must become visible on the cycle after valid && ready
-  implicit def apply(x: (Bool, UInt) => Bool) =
+  implicit def apply(x: (Bool, UInt) => Bool): RegWriteFn =
     // combinational => data valid on oready
     new RegWriteFn(
       true,
@@ -87,12 +87,12 @@ object RegWriteFn {
 case class RegField(width: Int, read: RegReadFn, write: RegWriteFn, desc: Option[RegFieldDesc]) {
   require(width >= 0, s"RegField width must be >= 0, not $width")
 
-  def pipelined = !read.combinational || !write.combinational
+  def pipelined: Boolean = !read.combinational || !write.combinational
 
-  def readOnly = this.copy(write = (), desc = this.desc.map(_.copy(access = RegFieldAccessType.R)))
+  def readOnly: RegField = this.copy(write = (), desc = this.desc.map(_.copy(access = RegFieldAccessType.R)))
 
   def toJson(byteOffset: Int, bitOffset: Int): JValue = {
-    (("byteOffset" -> s"0x${byteOffset.toHexString}") ~
+    ("byteOffset" -> s"0x${byteOffset.toHexString}") ~
       ("bitOffset" -> bitOffset) ~
       ("bitWidth" -> width) ~
       ("name" -> desc.map(_.name)) ~
@@ -107,9 +107,9 @@ case class RegField(width: Int, read: RegReadFn, write: RegWriteFn, desc: Option
       ("enumerations" -> desc.map { d =>
         Option(d.enumerations.map {
           case (key, (name, edesc)) =>
-            (("value" -> key) ~ ("name" -> name) ~ ("description" -> edesc))
+            ("value" -> key) ~ ("name" -> name) ~ ("description" -> edesc)
         }).filter(_.nonEmpty)
-      }))
+      })
   }
 }
 
@@ -138,7 +138,10 @@ object RegField {
     RegField(
       n,
       reg,
-      RegWriteFn((valid, data) => { reg := ~(~reg | Mux(valid, data, 0.U)) | set; true.B }),
+      RegWriteFn((valid, data) => {
+        reg := (~((~reg).asUInt() | Mux(valid, data, 0.U))).asUInt() | set
+        true.B
+      }),
       desc.map { _.copy(access = RegFieldAccessType.RW, wrType = Some(RegFieldWrType.ONE_TO_CLEAR), volatile = true) }
     )
 
@@ -198,7 +201,7 @@ object RegField {
 
   def bytes(reg: UInt, desc: Option[RegFieldDesc]): Seq[RegField] = {
     val width = reg.getWidth
-    require(width % 8 == 0, s"RegField.bytes must be called on byte-sized reg, not ${width} bits")
+    require(width % 8 == 0, s"RegField.bytes must be called on byte-sized reg, not $width bits")
     bytes(reg, width / 8, desc)
   }
 

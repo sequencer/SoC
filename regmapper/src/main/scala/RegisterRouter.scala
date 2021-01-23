@@ -4,7 +4,7 @@ package org.chipsalliance.utils.regmapper
 
 import chisel3.util.isPow2
 import chisel3._
-import diplomacy.{BundleBridgeSource, InModuleBody, LazyModule}
+import diplomacy.{BundleBridgeSource, InModuleBody, LazyModule, ModuleValue}
 import diplomacy.config.Parameters
 import org.chipsalliance.utils.addressing.AddressSet
 import org.chipsalliance.utils.dts.{Description, ResourceBindings, ResourceValue, SimpleDevice}
@@ -26,24 +26,24 @@ abstract class RegisterRouter(devParams: RegisterRouterParams)(implicit p: Param
 
   require(isPow2(devParams.size))
   val address = Seq(AddressSet(devParams.base, devParams.size - 1))
-  val concurrency = devParams.concurrency
-  val beatBytes = devParams.beatBytes
-  val undefZero = devParams.undefZero
-  val executable = devParams.executable
-  val device = new SimpleDevice(devParams.name, devParams.compat) {
+  val concurrency: Int = devParams.concurrency
+  val beatBytes:   Int = devParams.beatBytes
+  val undefZero:   Boolean = devParams.undefZero
+  val executable:  Boolean = devParams.executable
+  val device: SimpleDevice = new SimpleDevice(devParams.name, devParams.compat) {
     override def describe(resources: ResourceBindings): Description = {
       val Description(name, mapping) = super.describe(resources)
       Description(name, mapping ++ extraResources(resources))
     }
   }
   // Allow devices to extend the DTS mapping
-  def extraResources(resources: ResourceBindings) = Map[String, Seq[ResourceValue]]()
+  def extraResources(resources: ResourceBindings): Map[String, Seq[ResourceValue]] = Map[String, Seq[ResourceValue]]()
 
   protected def regmap(mapping: RegField.Map*): Unit
 }
 
 abstract class IORegisterRouter[T <: Data](devParams: RegisterRouterParams, portBundle: => T)(implicit p: Parameters)
     extends RegisterRouter(devParams) {
-  val ioNode = BundleBridgeSource(() => portBundle.cloneType)
-  val port = InModuleBody { ioNode.bundle }
+  val ioNode: BundleBridgeSource[T] = BundleBridgeSource(() => portBundle.cloneType)
+  val port:   ModuleValue[T] = InModuleBody { ioNode.bundle }
 }
