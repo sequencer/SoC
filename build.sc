@@ -100,6 +100,11 @@ class regmapper extends UtilityModule {
   )
 }
 
+object tilelink extends tilelink
+class tilelink extends UtilityModule {
+  override def moduleDeps = super.moduleDeps ++ Seq(diplomacyUtility, crossing, dts, misc, verification, prci, regmapper)
+}
+
 object playground extends playground
 class playground extends UtilityModule {
   override def moduleDeps = super.moduleDeps ++ Seq(diplomacyUtility)
