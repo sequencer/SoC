@@ -3,11 +3,10 @@ package org.chipsalliance.utils.prci
 
 import chisel3._
 import chisel3.util._
-import diplomacy.config._
 import diplomacy._
 import org.chipsalliance.utils.crossing.{AsyncResetReg, ResetCatchAndSync}
 
-class ResetWrangler(debounceNs: Double = 100000)(implicit p: Parameters) extends LazyModule {
+class ResetWrangler(debounceNs: Double = 100000) extends LazyModule {
   val node: ClockAdapterNode = ClockAdapterNode()
 
   lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {

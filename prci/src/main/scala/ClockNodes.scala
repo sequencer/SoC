@@ -2,7 +2,6 @@
 package org.chipsalliance.utils.prci
 
 import chisel3.internal.sourceinfo.SourceInfo
-import diplomacy.config.Parameters
 import diplomacy._
 import org.chipsalliance.utils.dts.FixedClockResource
 
@@ -10,15 +9,14 @@ object ClockImp extends SimpleNodeImp[ClockSourceParameters, ClockSinkParameters
   def edge(
     pd:         ClockSourceParameters,
     pu:         ClockSinkParameters,
-    p:          Parameters,
     sourceInfo: SourceInfo
   ): ClockEdgeParameters =
-    ClockEdgeParameters(pd, pu, p, sourceInfo)
+    ClockEdgeParameters(pd, pu, sourceInfo)
   def bundle(e: ClockEdgeParameters) = new ClockBundle(e.bundle)
   def render(e: ClockEdgeParameters): RenderedEdge = RenderedEdge(colour = "#00cc00" /* green */ )
 }
 
-case class ClockSourceNode(portParams: Seq[ClockSourceParameters])(implicit valName: ValName)
+case class ClockSourceNode(portParams: Seq[ClockSourceParameters])(implicit valName: sourcecode.Name)
     extends SourceNode(ClockImp)(portParams) {
   def fixedClockResources(name: String, prefix: String = "soc/"): Seq[Option[FixedClockResource]] = portParams.map {
     p =>
@@ -26,7 +24,7 @@ case class ClockSourceNode(portParams: Seq[ClockSourceParameters])(implicit valN
   }
 }
 
-case class ClockSinkNode(portParams: Seq[ClockSinkParameters])(implicit valName: ValName)
+case class ClockSinkNode(portParams: Seq[ClockSinkParameters])(implicit valName: sourcecode.Name)
     extends SinkNode(ClockImp)(portParams) {
   def fixedClockResources(name: String, prefix: String = "soc/"): Seq[Option[FixedClockResource]] = portParams.map {
     p =>
@@ -38,17 +36,17 @@ case class ClockAdapterNode(
   sourceFn: ClockSourceParameters => ClockSourceParameters = { m => m },
   sinkFn:   ClockSinkParameters => ClockSinkParameters = { s => s }
 )(
-  implicit valName: ValName)
+  implicit valName: sourcecode.Name)
     extends AdapterNode(ClockImp)(sourceFn, sinkFn)
 
-case class ClockIdentityNode()(implicit valName: ValName) extends IdentityNode(ClockImp)()
+case class ClockIdentityNode()(implicit valName: sourcecode.Name) extends IdentityNode(ClockImp)()
 
-case class ClockEphemeralNode()(implicit valName: ValName) extends EphemeralNode(ClockImp)()
+case class ClockEphemeralNode()(implicit valName: sourcecode.Name) extends EphemeralNode(ClockImp)()
 
 object ClockNameNode {
-  def apply(name: ValName):        ClockIdentityNode = ClockIdentityNode()(name)
-  def apply(name: Option[String]): ClockIdentityNode = apply(ValName(name.getOrElse("with_no_name")))
-  def apply(name: String):         ClockIdentityNode = apply(Some(name))
+  def apply(name: sourcecode.Name): ClockIdentityNode = ClockIdentityNode()(name)
+  def apply(name: Option[String]):  ClockIdentityNode = apply(ValName(name.getOrElse("with_no_name")))
+  def apply(name: String):          ClockIdentityNode = apply(Some(name))
 }
 
 object ClockTempNode {
@@ -65,7 +63,7 @@ object ClockSinkNode {
     freqErrorPPM:  Double = 10000,
     jitterPS:      Double = 300
   )(
-    implicit valName: ValName
+    implicit valName: sourcecode.Name
   ): ClockSinkNode =
     ClockSinkNode(
       Seq(
@@ -86,7 +84,7 @@ object ClockSourceNode {
     dutyCycle: Double = 50,
     jitterPS:  Double = 300
   )(
-    implicit valName: ValName
+    implicit valName: sourcecode.Name
   ): ClockSourceNode =
     ClockSourceNode(
       Seq(
@@ -108,26 +106,25 @@ object ClockGroupImp
   def edge(
     pd:         ClockGroupSourceParameters,
     pu:         ClockGroupSinkParameters,
-    p:          Parameters,
     sourceInfo: SourceInfo
   ): ClockGroupEdgeParameters =
-    ClockGroupEdgeParameters(pd, pu, p, sourceInfo)
+    ClockGroupEdgeParameters(pd, pu, sourceInfo)
   def bundle(e: ClockGroupEdgeParameters) = new ClockGroupBundle(e.bundle)
   def render(e: ClockGroupEdgeParameters): RenderedEdge = RenderedEdge(colour = "#00cc00" /* green */ )
 }
 
-case class ClockGroupSourceNode(params: Seq[ClockGroupSourceParameters])(implicit valName: ValName)
+case class ClockGroupSourceNode(params: Seq[ClockGroupSourceParameters])(implicit valName: sourcecode.Name)
     extends SourceNode(ClockGroupImp)(params)
-case class ClockGroupSinkNode(params: Seq[ClockGroupSinkParameters])(implicit valName: ValName)
+case class ClockGroupSinkNode(params: Seq[ClockGroupSinkParameters])(implicit valName: sourcecode.Name)
     extends SinkNode(ClockGroupImp)(params)
 
 case class ClockGroupAdapterNode(
   sourceFn: ClockGroupSourceParameters => ClockGroupSourceParameters = { m => m },
   sinkFn:   ClockGroupSinkParameters => ClockGroupSinkParameters = { s => s }
 )(
-  implicit valName: ValName)
+  implicit valName: sourcecode.Name)
     extends AdapterNode(ClockGroupImp)(sourceFn, sinkFn)
 
-case class ClockGroupIdentityNode()(implicit valName: ValName) extends IdentityNode(ClockGroupImp)()
+case class ClockGroupIdentityNode()(implicit valName: sourcecode.Name) extends IdentityNode(ClockGroupImp)()
 
-case class ClockGroupEphemeralNode()(implicit valName: ValName) extends EphemeralNode(ClockGroupImp)()
+case class ClockGroupEphemeralNode()(implicit valName: sourcecode.Name) extends EphemeralNode(ClockGroupImp)()

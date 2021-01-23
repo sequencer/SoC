@@ -1,11 +1,10 @@
 // See LICENSE.SiFive for license details.
 package org.chipsalliance.utils.prci
 
-import diplomacy.config.Parameters
 import diplomacy._
 import org.chipsalliance.utils.dts.FixedClockResource
 
-case class ClockGroupNode(groupName: String)(implicit valName: ValName)
+case class ClockGroupNode(groupName: String)(implicit valName: sourcecode.Name)
     extends MixedNexusNode(ClockGroupImp, ClockImp)(
       dFn = { _ => ClockSourceParameters() },
       uFn = { seq => ClockGroupSinkParameters(name = groupName, members = seq) }
@@ -13,7 +12,7 @@ case class ClockGroupNode(groupName: String)(implicit valName: ValName)
   override def circuitIdentity: Boolean = outputs.size == 1
 }
 
-class ClockGroup(groupName: String)(implicit p: Parameters) extends LazyModule {
+class ClockGroup(groupName: String) extends LazyModule {
   val node: ClockGroupNode = ClockGroupNode(groupName)
 
   lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {
@@ -28,10 +27,10 @@ class ClockGroup(groupName: String)(implicit p: Parameters) extends LazyModule {
 }
 
 object ClockGroup {
-  def apply()(implicit p: Parameters, valName: ValName): ClockGroupNode = LazyModule(new ClockGroup(valName.name)).node
+  def apply()(valName: sourcecode.Name): ClockGroupNode = LazyModule(new ClockGroup(valName.value)).node
 }
 
-case class ClockGroupAggregateNode(groupName: String)(implicit valName: ValName)
+case class ClockGroupAggregateNode(groupName: String)(implicit valName: sourcecode.Name)
     extends NexusNode(ClockGroupImp)(
       dFn = { _ => ClockGroupSourceParameters() },
       uFn = { seq => ClockGroupSinkParameters(name = groupName, members = seq.flatMap(_.members)) }
@@ -39,7 +38,7 @@ case class ClockGroupAggregateNode(groupName: String)(implicit valName: ValName)
   override def circuitIdentity: Boolean = outputs.size == 1
 }
 
-class ClockGroupAggregator(groupName: String)(implicit p: Parameters) extends LazyModule {
+class ClockGroupAggregator(groupName: String) extends LazyModule {
   val node: ClockGroupAggregateNode = ClockGroupAggregateNode(groupName)
 
   lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {
@@ -54,12 +53,12 @@ class ClockGroupAggregator(groupName: String)(implicit p: Parameters) extends La
 }
 
 object ClockGroupAggregator {
-  def apply()(implicit p: Parameters, valName: ValName): ClockGroupAggregateNode = LazyModule(
-    new ClockGroupAggregator(valName.name)
+  def apply()(implicit valName: sourcecode.Name): ClockGroupAggregateNode = LazyModule(
+    new ClockGroupAggregator(valName.value)
   ).node
 }
 
-class SimpleClockGroupSource(numSources: Int = 1)(implicit p: Parameters) extends LazyModule {
+class SimpleClockGroupSource(numSources: Int = 1) extends LazyModule {
   val node: ClockGroupSourceNode = ClockGroupSourceNode(List.fill(numSources) { ClockGroupSourceParameters() })
 
   lazy val module: LazyModuleImpLike = new LazyModuleImp(this) {
@@ -74,12 +73,12 @@ class SimpleClockGroupSource(numSources: Int = 1)(implicit p: Parameters) extend
 }
 
 object SimpleClockGroupSource {
-  def apply(num: Int = 1)(implicit p: Parameters, valName: ValName): ClockGroupSourceNode = LazyModule(
+  def apply(num: Int = 1)(implicit valName: sourcecode.Name): ClockGroupSourceNode = LazyModule(
     new SimpleClockGroupSource(num)
   ).node
 }
 
-case class FixedClockBroadcastNode(fixedClockOpt: Option[ClockParameters])(implicit valName: ValName)
+case class FixedClockBroadcastNode(fixedClockOpt: Option[ClockParameters])(implicit valName: sourcecode.Name)
     extends NexusNode(ClockImp)(
       dFn = { seq =>
         fixedClockOpt
@@ -100,7 +99,7 @@ case class FixedClockBroadcastNode(fixedClockOpt: Option[ClockParameters])(impli
   )
 }
 
-class FixedClockBroadcast(fixedClockOpt: Option[ClockParameters])(implicit p: Parameters) extends LazyModule {
+class FixedClockBroadcast(fixedClockOpt: Option[ClockParameters]) extends LazyModule {
   val node: FixedClockBroadcastNode = new FixedClockBroadcastNode(fixedClockOpt) {
     override def circuitIdentity: Boolean = outputs.size == 1
   }
@@ -114,13 +113,13 @@ class FixedClockBroadcast(fixedClockOpt: Option[ClockParameters])(implicit p: Pa
 }
 
 object FixedClockBroadcast {
-  def apply(fixedClockOpt: Option[ClockParameters])(implicit p: Parameters, valName: ValName): FixedClockBroadcastNode =
+  def apply(fixedClockOpt: Option[ClockParameters])(implicit valName: sourcecode.Name): FixedClockBroadcastNode =
     LazyModule(
       new FixedClockBroadcast(fixedClockOpt)
     ).node
 }
 
-case class PRCIClockGroupNode()(implicit valName: ValName)
+case class PRCIClockGroupNode()(implicit valName: sourcecode.Name)
     extends NexusNode(ClockGroupImp)(
       dFn = { _ => ClockGroupSourceParameters() },
       uFn = { _ => ClockGroupSinkParameters("prci", Nil) },

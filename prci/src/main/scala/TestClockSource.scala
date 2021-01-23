@@ -3,7 +3,6 @@ package org.chipsalliance.utils.prci
 import chisel3._
 import chisel3.util.HasBlackBoxInline
 import chisel3.experimental.DoubleParam
-import diplomacy.config.Parameters
 import diplomacy._
 
 class ClockSourceIO extends Bundle {
@@ -76,7 +75,7 @@ class ClockSourceAtFreqFromPlusArg(val plusArgName: String) extends BlackBox wit
 }
 
 /** This clock source is only intended to be used in test harnesses, and does not work correctly in verilator. */
-class TestClockSource(freqs: Seq[Option[Double]])(implicit p: Parameters) extends LazyModule {
+class TestClockSource(freqs: Seq[Option[Double]]) extends LazyModule {
 
   val node: ClockSourceNode = ClockSourceNode(
     freqs.map(f => ClockSourceParameters(give = f.map(ff => ClockParameters(freqMHz = ff))))

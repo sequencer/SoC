@@ -4,14 +4,9 @@ package org.chipsalliance.utils.dts
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 
-import diplomacy.config.Field
 import org.chipsalliance.utils.addressing.AddressRange
 
 import scala.sys.process._
-
-case object DTSModel extends Field[String]
-case object DTSCompat extends Field[Seq[String]] // -dev, -soc
-case object DTSTimebase extends Field[BigInt](0) // Clock frequency of clint RTC (use 0 if you don't know it)
 
 object DTS {
   def apply(res: ResourceValue): String = "/dts-v1/;\n\n" + helper(res, "", defaultCells).mkString("")

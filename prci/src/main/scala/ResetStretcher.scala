@@ -3,14 +3,13 @@ package org.chipsalliance.utils.prci
 
 import chisel3._
 import chisel3.util.log2Ceil
-import diplomacy.config.Parameters
 import diplomacy._
 
 /** This adapter takes an input reset and stretches it.
   *
   * If the reset was asynchronous, it becomes synchronous.
   */
-class ResetStretcher(cycles: Int)(implicit p: Parameters) extends LazyModule {
+class ResetStretcher(cycles: Int) extends LazyModule {
   val node: ClockAdapterNode = ClockAdapterNode()(ValName("reset_stretcher"))
   require(cycles > 1, s"ResetStretcher only supports cycles > 1 but got $cycles")
 

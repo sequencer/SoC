@@ -3,7 +3,6 @@
 package org.chipsalliance.utils.prci
 
 import chisel3._
-import diplomacy.config.Parameters
 import diplomacy._
 import diplomacy.BundleBridgeNexus.fillN
 import org.chipsalliance.utils.crossing.{BlockDuringReset, Blockable}
@@ -16,8 +15,6 @@ object BundleBridgeBlockDuringReset {
     default:             Option[() => T] = None,
     inputRequiresOutput: Boolean = false,
     shouldBeInlined:     Boolean = true
-  )(
-    implicit p: Parameters
   ): BundleBridgeNexusNode[T] = {
     val nexus = LazyModule(
       new BundleBridgeNexus[T](

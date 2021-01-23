@@ -3,13 +3,12 @@ package org.chipsalliance.utils.prci
 
 import chisel3._
 import chisel3.util.isPow2
-import diplomacy.config.Parameters
 import diplomacy._
 import org.chipsalliance.utils.crossing.{ClockDivider3, Pow2ClockDivider}
 
 /* An example clock adapter that divides all clocks passed through this node by an integer factor
  */
-class ClockDivider(div: Int)(implicit p: Parameters) extends LazyModule {
+class ClockDivider(div: Int) extends LazyModule {
   val node: ClockAdapterNode = ClockAdapterNode(
     sourceFn = src => src.copy(give = src.give.map(x => x.copy(freqMHz = x.freqMHz / div))),
     sinkFn = snk => snk.copy(take = snk.take.map(x => x.copy(freqMHz = x.freqMHz * div)))

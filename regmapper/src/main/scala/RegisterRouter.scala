@@ -5,7 +5,6 @@ package org.chipsalliance.utils.regmapper
 import chisel3.util.isPow2
 import chisel3._
 import diplomacy.{BundleBridgeSource, InModuleBody, LazyModule, ModuleValue}
-import diplomacy.config.Parameters
 import org.chipsalliance.utils.addressing.AddressSet
 import org.chipsalliance.utils.dts.{Description, ResourceBindings, ResourceValue, SimpleDevice}
 import org.chipsalliance.utils.prci.HasClockDomainCrossing
@@ -20,9 +19,7 @@ case class RegisterRouterParams(
   undefZero:   Boolean = true,
   executable:  Boolean = false)
 
-abstract class RegisterRouter(devParams: RegisterRouterParams)(implicit p: Parameters)
-    extends LazyModule
-    with HasClockDomainCrossing {
+abstract class RegisterRouter(devParams: RegisterRouterParams) extends LazyModule with HasClockDomainCrossing {
 
   require(isPow2(devParams.size))
   val address = Seq(AddressSet(devParams.base, devParams.size - 1))
@@ -42,7 +39,7 @@ abstract class RegisterRouter(devParams: RegisterRouterParams)(implicit p: Param
   protected def regmap(mapping: RegField.Map*): Unit
 }
 
-abstract class IORegisterRouter[T <: Data](devParams: RegisterRouterParams, portBundle: => T)(implicit p: Parameters)
+abstract class IORegisterRouter[T <: Data](devParams: RegisterRouterParams, portBundle: => T)
     extends RegisterRouter(devParams) {
   val ioNode: BundleBridgeSource[T] = BundleBridgeSource(() => portBundle.cloneType)
   val port:   ModuleValue[T] = InModuleBody { ioNode.bundle }

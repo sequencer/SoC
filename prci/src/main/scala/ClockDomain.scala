@@ -4,7 +4,6 @@ package org.chipsalliance.utils.prci
 
 import chisel3._
 import diplomacy._
-import diplomacy.config.Parameters
 import org.chipsalliance.utils.crossing.{ClockCrossingType, CrossingType}
 
 trait HasDomainCrossing extends LazyScope { this: LazyModule =>
@@ -15,7 +14,7 @@ trait HasClockDomainCrossing extends HasDomainCrossing { this: LazyModule =>
   type DomainCrossingType = ClockCrossingType
 }
 
-abstract class Domain(implicit p: Parameters) extends LazyModule with HasDomainCrossing {
+abstract class Domain extends LazyModule with HasDomainCrossing {
   def clockBundle: ClockBundle
 
   lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {
@@ -31,20 +30,20 @@ abstract class Domain(implicit p: Parameters) extends LazyModule with HasDomainC
   }
 }
 
-abstract class ClockDomain(implicit p: Parameters) extends Domain with HasClockDomainCrossing
+abstract class ClockDomain extends Domain with HasClockDomainCrossing
 
-class ClockSinkDomain(val clockSinkParams: ClockSinkParameters)(implicit p: Parameters) extends ClockDomain {
-  def this(take: Option[ClockParameters] = None, name: Option[String] = None)(implicit p: Parameters) =
+class ClockSinkDomain(val clockSinkParams: ClockSinkParameters) extends ClockDomain {
+  def this(take: Option[ClockParameters] = None, name: Option[String] = None) =
     this(ClockSinkParameters(take = take, name = name))
   val clockNode:   ClockSinkNode = ClockSinkNode(Seq(clockSinkParams))
   def clockBundle: ClockBundle = clockNode.in.head._1
 }
 
-class ClockSourceDomain(val clockSourceParams: ClockSourceParameters)(implicit p: Parameters) extends ClockDomain {
-  def this(give: Option[ClockParameters] = None, name: Option[String] = None)(implicit p: Parameters) =
+class ClockSourceDomain(val clockSourceParams: ClockSourceParameters) extends ClockDomain {
+  def this(give: Option[ClockParameters] = None, name: Option[String] = None) =
     this(ClockSourceParameters(give = give, name = name))
   val clockNode:   ClockSourceNode = ClockSourceNode(Seq(clockSourceParams))
   def clockBundle: ClockBundle = clockNode.out.head._1
 }
 
-abstract class ResetDomain(implicit p: Parameters) extends Domain with HasResetDomainCrossing
+abstract class ResetDomain extends Domain with HasResetDomainCrossing

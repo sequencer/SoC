@@ -2,7 +2,6 @@
 package org.chipsalliance.utils.prci
 
 import chisel3.internal.sourceinfo.SourceInfo
-import diplomacy.config.Parameters
 import scala.collection.immutable.ListMap
 
 // All Clock parameters specify only the PLL values required at power-on
@@ -39,7 +38,6 @@ case class ClockBundleParameters()
 case class ClockEdgeParameters(
   source:     ClockSourceParameters,
   sink:       ClockSinkParameters,
-  params:     Parameters,
   sourceInfo: SourceInfo) {
   // Unify the given+taken ClockParameters
   val clock: Option[ClockParameters] = source.give.orElse(sink.take).map { clock =>
@@ -64,12 +62,11 @@ case class ClockGroupBundleParameters(
 case class ClockGroupEdgeParameters(
   source:     ClockGroupSourceParameters,
   sink:       ClockGroupSinkParameters,
-  params:     Parameters,
   sourceInfo: SourceInfo) {
   val sourceParameters: ClockSourceParameters = ClockSourceParameters()
   val members: ListMap[String, ClockEdgeParameters] = ListMap(sink.members.zipWithIndex.map {
     case (s, i) =>
-      s"${sink.name}_${s.name.getOrElse(i)}" -> ClockEdgeParameters(sourceParameters, s, params, sourceInfo)
+      s"${sink.name}_${s.name.getOrElse(i)}" -> ClockEdgeParameters(sourceParameters, s, sourceInfo)
   }: _*)
 
   val bundle: ClockGroupBundleParameters = ClockGroupBundleParameters(members.map { case (k, v) => k -> v.bundle })

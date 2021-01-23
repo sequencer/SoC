@@ -1,14 +1,13 @@
 // See LICENSE for license details.
 package org.chipsalliance.utils.prci
 
-import diplomacy.config.Parameters
 import diplomacy._
 import org.chipsalliance.utils.crossing.ResetCatchAndSync
 
 /**
   * Synchronizes the reset of a diplomatic clock-reset pair to its accompanying clock.
   */
-class ResetSynchronizer(implicit p: Parameters) extends LazyModule {
+class ResetSynchronizer extends LazyModule {
   val node: ClockAdapterNode = ClockAdapterNode()
   lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {
     node.out.zip(node.in).map {
@@ -20,13 +19,13 @@ class ResetSynchronizer(implicit p: Parameters) extends LazyModule {
 }
 
 object ResetSynchronizer {
-  def apply()(implicit p: Parameters, valName: ValName): ClockAdapterNode = LazyModule(new ResetSynchronizer()).node
+  def apply()(implicit valName: sourcecode.Name): ClockAdapterNode = LazyModule(new ResetSynchronizer()).node
 }
 
 /**
   * Instantiates a reset synchronizer on all clock-reset pairs in a clock group.
   */
-class ClockGroupResetSynchronizer(implicit p: Parameters) extends LazyModule {
+class ClockGroupResetSynchronizer(implicit valName: sourcecode.Name) extends LazyModule {
   val node: ClockGroupAdapterNode = ClockGroupAdapterNode()
   lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {
     node.out.zip(node.in).map {
@@ -41,7 +40,7 @@ class ClockGroupResetSynchronizer(implicit p: Parameters) extends LazyModule {
 }
 
 object ClockGroupResetSynchronizer {
-  def apply()(implicit p: Parameters, valName: ValName): ClockGroupAdapterNode = LazyModule(
+  def apply()(implicit valName: sourcecode.Name): ClockGroupAdapterNode = LazyModule(
     new ClockGroupResetSynchronizer()
   ).node
 }
