@@ -5,10 +5,10 @@ package org.chipsalliance.utils.jtag
 import chisel3._
 
 class JTAGIdcodeBundle extends Bundle {
-  val version = UInt(4.W)
-  val partNumber = UInt(16.W)
-  val mfrId = UInt(11.W)
-  val always1 = UInt(1.W)
+  val version:    UInt = UInt(4.W)
+  val partNumber: UInt = UInt(16.W)
+  val mfrId:      UInt = UInt(11.W)
+  val always1:    UInt = UInt(1.W)
 }
 
 object JtagIdcode {

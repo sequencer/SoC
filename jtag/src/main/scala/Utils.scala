@@ -8,8 +8,8 @@ import chisel3.util._
 /** Bundle representing a tristate pin.
   */
 class Tristate extends Bundle {
-  val data = Bool()
-  val driven = Bool() // active high, pin is hi-Z when driven is low
+  val data:   Bool = Bool()
+  val driven: Bool = Bool() // active high, pin is hi-Z when driven is low
 }
 
 /** A module that counts transitions on the input clock line, used as a basic sanity check and
@@ -18,13 +18,13 @@ class Tristate extends Bundle {
 class ClockedCounter(counts: BigInt, init: Option[BigInt]) extends Module {
   require(counts > 0, "really?")
 
-  val width = log2Ceil(counts)
+  val width: Int = log2Ceil(counts)
   class CountIO extends Bundle {
-    val count = Output(UInt(width.W))
+    val count: UInt = Output(UInt(width.W))
   }
-  val io = IO(new CountIO)
+  val io: CountIO = IO(new CountIO)
 
-  val count = init match {
+  val count: UInt = init match {
     case Some(init) => RegInit(init.U(width.W))
     case None       => Reg(UInt(width.W))
   }

@@ -13,7 +13,7 @@ object JtagState {
   object State {
     import scala.language.implicitConversions
 
-    implicit def toInt(x:    State) = x.id
+    implicit def toInt(x:    State): Int = x.id
     implicit def toBigInt(x: State): BigInt = x.id
 
     // TODO: this could be automatically generated with macros and stuff
@@ -35,8 +35,8 @@ object JtagState {
       Exit2IR,
       UpdateIR
     )
-    val width = log2Ceil(all.size)
-    def chiselType() = UInt(width.W)
+    val width:        Int = log2Ceil(all.size)
+    def chiselType(): UInt = UInt(width.W)
   }
 
   // States as described in 6.1.1.2, numeric assignments from example in Table 6-3
@@ -80,13 +80,13 @@ object JtagState {
   */
 class JtagStateMachine extends Module {
   class StateMachineIO extends Bundle {
-    val tms = Input(Bool())
-    val currState = Output(JtagState.State.chiselType)
+    val tms:       Bool = Input(Bool())
+    val currState: UInt = Output(JtagState.State.chiselType())
   }
-  val io = IO(new StateMachineIO)
+  val io: StateMachineIO = IO(new StateMachineIO)
 
   val nextState = WireInit(JtagState.TestLogicReset.U)
-  val currState = RegNext(next = nextState, init = JtagState.TestLogicReset.U)
+  val currState: UInt = RegNext(next = nextState, init = JtagState.TestLogicReset.U)
 
   switch(currState) {
     is(JtagState.TestLogicReset.U) {
