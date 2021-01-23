@@ -19,8 +19,8 @@ object ClockGroupDriver {
   type DriveFn = (ClockGroupEphemeralNode, Int, Parameters, ValName) => ModuleValue[RecordMap[ClockBundle]]
 
   /** Drive all members of all groups from the Chisel implicit clock */
-  def driveFromImplicitClock: DriveFn = { (groups, num, p, vn) =>
-    implicit val pp = p
+  def driveFromImplicitClock: DriveFn = { (groups, num, p, _) =>
+    implicit val pp:               Parameters = p
     val dummyClockGroupSourceNode: ClockGroupSourceNode = SimpleClockGroupSource(num)
     groups :*= dummyClockGroupSourceNode
     InModuleBody { RecordMap[ClockBundle]() }
@@ -28,12 +28,12 @@ object ClockGroupDriver {
 
   /** Drive all members of all groups from a flattened IO representation */
   def driveFromIOs: DriveFn = { (groups, num, p, vn) =>
-    implicit val pp = p
+    implicit val pp: Parameters = p
     val ioClockGroupSourceNode = ClockGroupSourceNode(List.fill(num) { ClockGroupSourceParameters() })
     groups :*= ioClockGroupSourceNode
     InModuleBody {
       val bundles = ioClockGroupSourceNode.out.map(_._1)
-      val elements = bundles.map(_.member.elements).flatten
+      val elements = bundles.flatMap(_.member.elements)
       val io = IO(Flipped(RecordMap(elements.map {
         case (name, data) =>
           name -> data.cloneType

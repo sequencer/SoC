@@ -7,9 +7,9 @@ import diplomacy.config.Parameters
 import diplomacy._
 
 class ClockSourceIO extends Bundle {
-  val power = Input(Bool())
-  val gate = Input(Bool())
-  val clk = Output(Clock())
+  val power: Bool = Input(Bool())
+  val gate:  Bool = Input(Bool())
+  val clk:   Clock = Output(Clock())
 }
 
 /** This clock source is only intended to be used in test harnesses, and does not work correctly in verilator. */
@@ -20,7 +20,7 @@ class ClockSourceAtFreq(val freqMHz: Double)
       )
     )
     with HasBlackBoxInline {
-  val io = IO(new ClockSourceIO)
+  val io: Record = IO(new ClockSourceIO)
 
   setInline(
     "ClockSourceAtFreq.v",
@@ -45,7 +45,7 @@ class ClockSourceAtFreq(val freqMHz: Double)
 
 /** This clock source is only intended to be used in test harnesses, and does not work correctly in verilator. */
 class ClockSourceAtFreqFromPlusArg(val plusArgName: String) extends BlackBox with HasBlackBoxInline {
-  val io = IO(new ClockSourceIO)
+  val io: Record = IO(new ClockSourceIO)
 
   override def desiredName = s"ClockSourceAtFreqFromPlusArg$plusArgName"
 
@@ -78,9 +78,11 @@ class ClockSourceAtFreqFromPlusArg(val plusArgName: String) extends BlackBox wit
 /** This clock source is only intended to be used in test harnesses, and does not work correctly in verilator. */
 class TestClockSource(freqs: Seq[Option[Double]])(implicit p: Parameters) extends LazyModule {
 
-  val node = ClockSourceNode(freqs.map(f => ClockSourceParameters(give = f.map(ff => ClockParameters(freqMHz = ff)))))
+  val node: ClockSourceNode = ClockSourceNode(
+    freqs.map(f => ClockSourceParameters(give = f.map(ff => ClockParameters(freqMHz = ff))))
+  )
 
-  lazy val module = new LazyModuleImp(this) {
+  lazy val module: LazyModuleImpLike = new LazyModuleImp(this) {
     node.out.zipWithIndex.foreach {
       case ((bundle, edge), i) =>
         val source = Module(

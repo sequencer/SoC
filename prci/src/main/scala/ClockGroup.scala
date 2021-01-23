@@ -10,25 +10,25 @@ case class ClockGroupNode(groupName: String)(implicit valName: ValName)
       dFn = { _ => ClockSourceParameters() },
       uFn = { seq => ClockGroupSinkParameters(name = groupName, members = seq) }
     ) {
-  override def circuitIdentity = outputs.size == 1
+  override def circuitIdentity: Boolean = outputs.size == 1
 }
 
 class ClockGroup(groupName: String)(implicit p: Parameters) extends LazyModule {
-  val node = ClockGroupNode(groupName)
+  val node: ClockGroupNode = ClockGroupNode(groupName)
 
-  lazy val module = new LazyRawModuleImp(this) {
-    val (in, _) = node.in(0)
+  lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {
+    val (in, _) = node.in.head
     val (out, _) = node.out.unzip
 
     require(node.in.size == 1)
     require(in.member.size == out.size)
 
-    (in.member.data.zip(out)).foreach { case (i, o) => o := i }
+    in.member.data.zip(out).foreach { case (i, o) => o := i }
   }
 }
 
 object ClockGroup {
-  def apply()(implicit p: Parameters, valName: ValName) = LazyModule(new ClockGroup(valName.name)).node
+  def apply()(implicit p: Parameters, valName: ValName): ClockGroupNode = LazyModule(new ClockGroup(valName.name)).node
 }
 
 case class ClockGroupAggregateNode(groupName: String)(implicit valName: ValName)
@@ -36,31 +36,33 @@ case class ClockGroupAggregateNode(groupName: String)(implicit valName: ValName)
       dFn = { _ => ClockGroupSourceParameters() },
       uFn = { seq => ClockGroupSinkParameters(name = groupName, members = seq.flatMap(_.members)) }
     ) {
-  override def circuitIdentity = outputs.size == 1
+  override def circuitIdentity: Boolean = outputs.size == 1
 }
 
 class ClockGroupAggregator(groupName: String)(implicit p: Parameters) extends LazyModule {
-  val node = ClockGroupAggregateNode(groupName)
+  val node: ClockGroupAggregateNode = ClockGroupAggregateNode(groupName)
 
-  lazy val module = new LazyRawModuleImp(this) {
+  lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {
     val (in, _) = node.in.unzip
     val (out, _) = node.out.unzip
-    val outputs = out.flatMap(_.member.data)
+    val outputs: Seq[ClockBundle] = out.flatMap(_.member.data)
 
-    require(node.in.size == 1, s"Aggregator for groupName: ${groupName} had ${node.in.size} inward edges instead of 1")
+    require(node.in.size == 1, s"Aggregator for groupName: $groupName had ${node.in.size} inward edges instead of 1")
     require(in.head.member.size == outputs.size)
     in.head.member.data.zip(outputs).foreach { case (i, o) => o := i }
   }
 }
 
 object ClockGroupAggregator {
-  def apply()(implicit p: Parameters, valName: ValName) = LazyModule(new ClockGroupAggregator(valName.name)).node
+  def apply()(implicit p: Parameters, valName: ValName): ClockGroupAggregateNode = LazyModule(
+    new ClockGroupAggregator(valName.name)
+  ).node
 }
 
 class SimpleClockGroupSource(numSources: Int = 1)(implicit p: Parameters) extends LazyModule {
-  val node = ClockGroupSourceNode(List.fill(numSources) { ClockGroupSourceParameters() })
+  val node: ClockGroupSourceNode = ClockGroupSourceNode(List.fill(numSources) { ClockGroupSourceParameters() })
 
-  lazy val module = new LazyModuleImp(this) {
+  lazy val module: LazyModuleImpLike = new LazyModuleImp(this) {
 
     val (out, _) = node.out.unzip
     out.map { out: ClockGroupBundle =>
@@ -72,7 +74,9 @@ class SimpleClockGroupSource(numSources: Int = 1)(implicit p: Parameters) extend
 }
 
 object SimpleClockGroupSource {
-  def apply(num: Int = 1)(implicit p: Parameters, valName: ValName) = LazyModule(new SimpleClockGroupSource(num)).node
+  def apply(num: Int = 1)(implicit p: Parameters, valName: ValName): ClockGroupSourceNode = LazyModule(
+    new SimpleClockGroupSource(num)
+  ).node
 }
 
 case class FixedClockBroadcastNode(fixedClockOpt: Option[ClockParameters])(implicit valName: ValName)
@@ -97,12 +101,12 @@ case class FixedClockBroadcastNode(fixedClockOpt: Option[ClockParameters])(impli
 }
 
 class FixedClockBroadcast(fixedClockOpt: Option[ClockParameters])(implicit p: Parameters) extends LazyModule {
-  val node = new FixedClockBroadcastNode(fixedClockOpt) {
-    override def circuitIdentity = outputs.size == 1
+  val node: FixedClockBroadcastNode = new FixedClockBroadcastNode(fixedClockOpt) {
+    override def circuitIdentity: Boolean = outputs.size == 1
   }
 
-  lazy val module = new LazyRawModuleImp(this) {
-    val (in, _) = node.in(0)
+  lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {
+    val (in, _) = node.in.head
     val (out, _) = node.out.unzip
     require(node.in.size == 1, "FixedClockBroadcast can only broadcast a single clock")
     out.foreach { _ := in }
@@ -110,9 +114,10 @@ class FixedClockBroadcast(fixedClockOpt: Option[ClockParameters])(implicit p: Pa
 }
 
 object FixedClockBroadcast {
-  def apply(fixedClockOpt: Option[ClockParameters])(implicit p: Parameters, valName: ValName) = LazyModule(
-    new FixedClockBroadcast(fixedClockOpt)
-  ).node
+  def apply(fixedClockOpt: Option[ClockParameters])(implicit p: Parameters, valName: ValName): FixedClockBroadcastNode =
+    LazyModule(
+      new FixedClockBroadcast(fixedClockOpt)
+    ).node
 }
 
 case class PRCIClockGroupNode()(implicit valName: ValName)

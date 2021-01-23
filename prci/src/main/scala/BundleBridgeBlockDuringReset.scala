@@ -28,13 +28,13 @@ object BundleBridgeBlockDuringReset {
             case s: StretchedResetCrossing => BlockDuringReset(data, s.cycles)
           }
         },
-        outputFn = fillN[T](registered) _,
+        outputFn = fillN[T](registered),
         default = default,
         inputRequiresOutput = inputRequiresOutput,
         shouldBeInlined = shouldBeInlined
       )
     )
-    name.foreach(nexus.suggestName(_))
+    name.foreach(nexus.suggestName)
     nexus.node
   }
 }

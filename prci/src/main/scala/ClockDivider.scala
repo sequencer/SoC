@@ -10,21 +10,20 @@ import org.chipsalliance.utils.crossing.{ClockDivider3, Pow2ClockDivider}
 /* An example clock adapter that divides all clocks passed through this node by an integer factor
  */
 class ClockDivider(div: Int)(implicit p: Parameters) extends LazyModule {
-  val node = ClockAdapterNode(
-    sourceFn = { case src => src.copy(give = src.give.map(x => x.copy(freqMHz = x.freqMHz / div))) },
-    sinkFn = { case snk => snk.copy(take = snk.take.map(x => x.copy(freqMHz = x.freqMHz * div))) }
+  val node: ClockAdapterNode = ClockAdapterNode(
+    sourceFn = src => src.copy(give = src.give.map(x => x.copy(freqMHz = x.freqMHz / div))),
+    sinkFn = snk => snk.copy(take = snk.take.map(x => x.copy(freqMHz = x.freqMHz * div)))
   )
 
-  lazy val module = new LazyModuleImp(this) {
-    (node.in.zip(node.out)).foreach {
+  lazy val module: LazyModuleImpLike = new LazyModuleImp(this) {
+    node.in.zip(node.out).foreach {
       case ((in, _), (out, _)) =>
         val div_clock: Clock = div match {
           case x if isPow2(x) => Pow2ClockDivider(in.clock, x)
-          case 3 => {
+          case 3 =>
             val div3 = Module(new ClockDivider3)
             div3.io.clk_in := in.clock
             div3.io.clk_out
-          }
           case x =>
             throw new IllegalArgumentException(
               s"rocketchip.util only supports clock division by powers of 2, or exactly 3, but got $x"

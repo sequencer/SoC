@@ -4,8 +4,8 @@ package org.chipsalliance.utils.prci
 import chisel3._
 
 class ClockBundle(val params: ClockBundleParameters) extends Bundle {
-  val clock = Output(Clock())
-  val reset = Output(Reset())
+  val clock: Clock = Output(Clock())
+  val reset: Reset = Output(Reset())
 }
 
 class ClockGroupBundle(val params: ClockGroupBundleParameters) extends Bundle {

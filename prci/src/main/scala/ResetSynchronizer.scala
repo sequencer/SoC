@@ -3,15 +3,15 @@ package org.chipsalliance.utils.prci
 
 import diplomacy.config.Parameters
 import diplomacy._
-import org.chipsalliance.utils.crossing.{ResetCatchAndSync}
+import org.chipsalliance.utils.crossing.ResetCatchAndSync
 
 /**
   * Synchronizes the reset of a diplomatic clock-reset pair to its accompanying clock.
   */
 class ResetSynchronizer(implicit p: Parameters) extends LazyModule {
-  val node = ClockAdapterNode()
-  lazy val module = new LazyRawModuleImp(this) {
-    (node.out.zip(node.in)).map {
+  val node: ClockAdapterNode = ClockAdapterNode()
+  lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {
+    node.out.zip(node.in).map {
       case ((o, _), (i, _)) =>
         o.clock := i.clock
         o.reset := ResetCatchAndSync(i.clock, i.reset.asBool)
@@ -20,18 +20,18 @@ class ResetSynchronizer(implicit p: Parameters) extends LazyModule {
 }
 
 object ResetSynchronizer {
-  def apply()(implicit p: Parameters, valName: ValName) = LazyModule(new ResetSynchronizer()).node
+  def apply()(implicit p: Parameters, valName: ValName): ClockAdapterNode = LazyModule(new ResetSynchronizer()).node
 }
 
 /**
   * Instantiates a reset synchronizer on all clock-reset pairs in a clock group.
   */
 class ClockGroupResetSynchronizer(implicit p: Parameters) extends LazyModule {
-  val node = ClockGroupAdapterNode()
-  lazy val module = new LazyRawModuleImp(this) {
-    (node.out.zip(node.in)).map {
+  val node: ClockGroupAdapterNode = ClockGroupAdapterNode()
+  lazy val module: LazyModuleImpLike = new LazyRawModuleImp(this) {
+    node.out.zip(node.in).map {
       case ((oG, _), (iG, _)) =>
-        (oG.member.data.zip(iG.member.data)).foreach {
+        oG.member.data.zip(iG.member.data).foreach {
           case (o, i) =>
             o.clock := i.clock
             o.reset := ResetCatchAndSync(i.clock, i.reset.asBool)
@@ -41,5 +41,7 @@ class ClockGroupResetSynchronizer(implicit p: Parameters) extends LazyModule {
 }
 
 object ClockGroupResetSynchronizer {
-  def apply()(implicit p: Parameters, valName: ValName) = LazyModule(new ClockGroupResetSynchronizer()).node
+  def apply()(implicit p: Parameters, valName: ValName): ClockGroupAdapterNode = LazyModule(
+    new ClockGroupResetSynchronizer()
+  ).node
 }

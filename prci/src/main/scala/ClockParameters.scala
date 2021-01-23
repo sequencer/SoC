@@ -42,13 +42,13 @@ case class ClockEdgeParameters(
   params:     Parameters,
   sourceInfo: SourceInfo) {
   // Unify the given+taken ClockParameters
-  val clock = source.give.orElse(sink.take).map { clock =>
+  val clock: Option[ClockParameters] = source.give.orElse(sink.take).map { clock =>
     source.give.foreach { x => require(clock == x) }
     sink.take.foreach { x => require(clock == x) }
     clock
   }
 
-  val bundle = ClockBundleParameters()
+  val bundle: ClockBundleParameters = ClockBundleParameters()
 }
 
 // ClockGroups exist as the output of a PLL
@@ -66,11 +66,11 @@ case class ClockGroupEdgeParameters(
   sink:       ClockGroupSinkParameters,
   params:     Parameters,
   sourceInfo: SourceInfo) {
-  val sourceParameters = ClockSourceParameters()
+  val sourceParameters: ClockSourceParameters = ClockSourceParameters()
   val members: ListMap[String, ClockEdgeParameters] = ListMap(sink.members.zipWithIndex.map {
     case (s, i) =>
       s"${sink.name}_${s.name.getOrElse(i)}" -> ClockEdgeParameters(sourceParameters, s, params, sourceInfo)
   }: _*)
 
-  val bundle = ClockGroupBundleParameters(members.map { case (k, v) => k -> v.bundle })
+  val bundle: ClockGroupBundleParameters = ClockGroupBundleParameters(members.map { case (k, v) => k -> v.bundle })
 }

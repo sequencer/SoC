@@ -7,13 +7,18 @@ import diplomacy._
 import org.chipsalliance.utils.dts.FixedClockResource
 
 object ClockImp extends SimpleNodeImp[ClockSourceParameters, ClockSinkParameters, ClockEdgeParameters, ClockBundle] {
-  def edge(pd: ClockSourceParameters, pu: ClockSinkParameters, p: Parameters, sourceInfo: SourceInfo) =
+  def edge(
+    pd:         ClockSourceParameters,
+    pu:         ClockSinkParameters,
+    p:          Parameters,
+    sourceInfo: SourceInfo
+  ): ClockEdgeParameters =
     ClockEdgeParameters(pd, pu, p, sourceInfo)
   def bundle(e: ClockEdgeParameters) = new ClockBundle(e.bundle)
-  def render(e: ClockEdgeParameters) = RenderedEdge(colour = "#00cc00" /* green */ )
+  def render(e: ClockEdgeParameters): RenderedEdge = RenderedEdge(colour = "#00cc00" /* green */ )
 }
 
-case class ClockSourceNode(val portParams: Seq[ClockSourceParameters])(implicit valName: ValName)
+case class ClockSourceNode(portParams: Seq[ClockSourceParameters])(implicit valName: ValName)
     extends SourceNode(ClockImp)(portParams) {
   def fixedClockResources(name: String, prefix: String = "soc/"): Seq[Option[FixedClockResource]] = portParams.map {
     p =>
@@ -21,7 +26,7 @@ case class ClockSourceNode(val portParams: Seq[ClockSourceParameters])(implicit 
   }
 }
 
-case class ClockSinkNode(val portParams: Seq[ClockSinkParameters])(implicit valName: ValName)
+case class ClockSinkNode(portParams: Seq[ClockSinkParameters])(implicit valName: ValName)
     extends SinkNode(ClockImp)(portParams) {
   def fixedClockResources(name: String, prefix: String = "soc/"): Seq[Option[FixedClockResource]] = portParams.map {
     p =>
@@ -41,7 +46,7 @@ case class ClockIdentityNode()(implicit valName: ValName) extends IdentityNode(C
 case class ClockEphemeralNode()(implicit valName: ValName) extends EphemeralNode(ClockImp)()
 
 object ClockNameNode {
-  def apply(name: ValName) = ClockIdentityNode()(name)
+  def apply(name: ValName):        ClockIdentityNode = ClockIdentityNode()(name)
   def apply(name: Option[String]): ClockIdentityNode = apply(ValName(name.getOrElse("with_no_name")))
   def apply(name: String):         ClockIdentityNode = apply(Some(name))
 }
@@ -100,10 +105,15 @@ object ClockGroupImp
       ClockGroupEdgeParameters,
       ClockGroupBundle
     ] {
-  def edge(pd: ClockGroupSourceParameters, pu: ClockGroupSinkParameters, p: Parameters, sourceInfo: SourceInfo) =
+  def edge(
+    pd:         ClockGroupSourceParameters,
+    pu:         ClockGroupSinkParameters,
+    p:          Parameters,
+    sourceInfo: SourceInfo
+  ): ClockGroupEdgeParameters =
     ClockGroupEdgeParameters(pd, pu, p, sourceInfo)
   def bundle(e: ClockGroupEdgeParameters) = new ClockGroupBundle(e.bundle)
-  def render(e: ClockGroupEdgeParameters) = RenderedEdge(colour = "#00cc00" /* green */ )
+  def render(e: ClockGroupEdgeParameters): RenderedEdge = RenderedEdge(colour = "#00cc00" /* green */ )
 }
 
 case class ClockGroupSourceNode(params: Seq[ClockGroupSourceParameters])(implicit valName: ValName)
