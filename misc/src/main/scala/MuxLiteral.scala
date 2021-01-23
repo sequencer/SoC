@@ -31,7 +31,7 @@ object MuxTable {
     require(cases.map(_._1).distinct.size == cases.size)
 
     /* Filter out any cases identical to the default */
-    val simple = cases.filter { case (k, v) => !default.isLit || !v.isLit || v.litValue != default.litValue }
+    val simple = cases.filter { case (_, v) => !default.isLit || !v.isLit || v.litValue != default.litValue }
 
     val maxKey = (BigInt(0) +: simple.map(_._1)).max
     val endIndex = BigInt(1) << log2Ceil(maxKey + 1)

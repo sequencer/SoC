@@ -15,9 +15,9 @@ import chisel3.util._
   * @param gen the type of data to be wrapped in Valid/Cancel
   */
 class ValidCancel[+T <: Data](gen: T) extends Bundle {
-  val earlyValid = Output(Bool())
-  val lateCancel = Output(Bool())
-  val bits = Output(gen)
+  val earlyValid:         Bool = Output(Bool())
+  val lateCancel:         Bool = Output(Bool())
+  val bits:               T = Output(gen)
   def validQual():        Bool = earlyValid && !lateCancel
   override def cloneType: this.type = ValidCancel(gen).asInstanceOf[this.type]
 
@@ -44,7 +44,7 @@ object ValidCancel {
   * @param gen the type of data to be wrapped in Ready/Valid/Cancel
   */
 class ReadyValidCancel[+T <: Data](gen: T) extends ValidCancel(gen) {
-  val ready = Input(Bool())
+  val ready:              Bool = Input(Bool())
   def mightFire():        Bool = ready && earlyValid
   def fire():             Bool = ready && validQual()
   override def cloneType: this.type = ReadyValidCancel(gen).asInstanceOf[this.type]
@@ -94,20 +94,20 @@ object ReadyValidCancel {
   */
 class ReadyValidCancelRRArbiter[T <: Data](gen: T, n: Int, rr: Boolean) extends Module {
   class ReadyValidCancelRRArbiterBundle extends Bundle {
-    val in = Flipped(Vec(n, ReadyValidCancel(gen)))
-    val out = ReadyValidCancel(gen)
+    val in:  Vec[ReadyValidCancel[T]] = Flipped(Vec(n, ReadyValidCancel(gen)))
+    val out: ReadyValidCancel[T] = ReadyValidCancel(gen)
   }
-  val io = IO(new ReadyValidCancelRRArbiterBundle)
+  val io: ReadyValidCancelRRArbiterBundle = IO(new ReadyValidCancelRRArbiterBundle)
 
-  val inputEarlyValidVec = Wire(Vec(n, Bool()))
-  val grantVec = Wire(Vec(n, Bool()))
-  val selectDcd = Wire(Vec(n, Bool()))
+  val inputEarlyValidVec: Vec[Bool] = Wire(Vec(n, Bool()))
+  val grantVec:           Vec[Bool] = Wire(Vec(n, Bool()))
+  val selectDcd:          Vec[Bool] = Wire(Vec(n, Bool()))
 
   inputEarlyValidVec := io.in.map(_.earlyValid)
 
   private val prevSelectEnc_in = Wire(UInt(log2Ceil(n).W))
   private val prevSelectEnc_en = Wire(Bool())
-  val prevSelectEnc_q = RegEnable(prevSelectEnc_in, 0.U, prevSelectEnc_en)
+  val prevSelectEnc_q: UInt = RegEnable(prevSelectEnc_in, 0.U, prevSelectEnc_en)
   prevSelectEnc_en := inputEarlyValidVec.orR || prevSelectEnc_q.orR
   prevSelectEnc_in := Mux(io.out.ready || !io.out.earlyValid, OHToUInt(selectDcd), prevSelectEnc_q)
 

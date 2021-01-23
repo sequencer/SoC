@@ -1,13 +1,17 @@
 package org.chipsalliance.utils
 
 import chisel3._
+
 import scala.math.min
 import chisel3.util.{isPow2, log2Ceil, BitPat, Cat, Fill, OHToUInt, RegEnable}
+
+import scala.annotation.tailrec
+import scala.language.implicitConversions
 
 package object misc {
 
   implicit class UnzippableOption[S, T](val x: Option[(S, T)]) {
-    def unzip = (x.map(_._1), x.map(_._2))
+    def unzip: (Option[S], Option[T]) = (x.map(_._1), x.map(_._2))
   }
 
   implicit class UIntIsOneOf(private val x: UInt) extends AnyVal {
@@ -43,7 +47,7 @@ package object misc {
         require(isPow2(x.size))
         val amt = n.padTo(log2Ceil(x.size))
         (0 until log2Ceil(x.size)).foldLeft(x)((r, i) =>
-          (r.rotate(1 << i).zip(r)).map { case (s, a) => Mux(amt(i), s, a) }
+          r.rotate(1 << i).zip(r).map { case (s, a) => Mux(amt(i), s, a) }
         )
       }
     }
@@ -57,7 +61,7 @@ package object misc {
         require(isPow2(x.size))
         val amt = n.padTo(log2Ceil(x.size))
         (0 until log2Ceil(x.size)).foldLeft(x)((r, i) =>
-          (r.rotateRight(1 << i).zip(r)).map { case (s, a) => Mux(amt(i), s, a) }
+          r.rotateRight(1 << i).zip(r).map { case (s, a) => Mux(amt(i), s, a) }
         )
       }
     }
@@ -65,7 +69,7 @@ package object misc {
 
   // allow bitwise ops on Seq[Bool] just like UInt
   implicit class SeqBoolBitwiseOps(private val x: Seq[Bool]) extends AnyVal {
-    def &(y:  Seq[Bool]): Seq[Bool] = (x.zip(y)).map { case (a, b) => a && b }
+    def &(y:  Seq[Bool]): Seq[Bool] = x.zip(y).map { case (a, b) => a && b }
     def |(y:  Seq[Bool]): Seq[Bool] = padZip(x, y).map { case (a, b) => a || b }
     def ^(y:  Seq[Bool]): Seq[Bool] = padZip(x, y).map { case (a, b) => a ^ b }
     def <<(n: Int):       Seq[Bool] = Seq.fill(n)(false.B) ++ x
@@ -89,7 +93,7 @@ package object misc {
   }
 
   /** Any Data subtype that has a Bool member named valid. */
-  type DataCanBeValid = Data { val valid: Bool }
+  type DataCanBeValid = Data {}
 
   implicit class SeqMemToAugmentedSeqMem[T <: Data](private val x: SyncReadMem[T]) extends AnyVal {
     def readAndHold(addr: UInt, enable: Bool): T = x.read(addr, enable).holdUnless(RegNext(enable))
@@ -139,7 +143,7 @@ package object misc {
       require(w <= 30)
 
       val shifted = x << n(w - 1, 0)
-      Mux(n(w), shifted >> (1 << w), shifted)
+      Mux(n(w), shifted >> (1 << w), shifted).asUInt()
     }
 
     // shifts right by n if n >= 0, or left by -n if n < 0
@@ -148,7 +152,7 @@ package object misc {
       require(w <= 30)
 
       val shifted = x << (1 << w) >> n(w - 1, 0)
-      Mux(n(w), shifted, shifted >> (1 << w))
+      Mux(n(w), shifted, shifted >> (1 << w)).asUInt()
     }
 
     // Like UInt.apply(hi, lo), but returns 0.U for zero-width extracts
@@ -166,7 +170,7 @@ package object misc {
     }
 
     // like x & ~y, but first truncate or zero-extend y to x's width
-    def andNot(y: UInt): UInt = x & ~(y | (x & 0.U))
+    def andNot(y: UInt): UInt = x & (~(y | (x & 0.U)).asUInt()).asUInt()
 
     def rotateRight(n: Int): UInt = if (n == 0) x else Cat(x(n - 1, 0), x >> n)
 
@@ -205,7 +209,7 @@ package object misc {
     def grouped(width: Int): Seq[UInt] =
       (0 until x.getWidth by width).map(base => x(base + width - 1, base))
 
-    def inRange(base: UInt, bounds: UInt) = x >= base && x < bounds
+    def inRange(base: UInt, bounds: UInt): Bool = x >= base && x < bounds
 
     def ##(y: Option[UInt]): UInt = y.map(x ## _).getOrElse(x)
 
@@ -233,9 +237,9 @@ package object misc {
     }
   }
 
-  def OH1ToOH(x:   UInt): UInt = (x << 1 | 1.U) & ~Cat(0.U(1.W), x)
+  def OH1ToOH(x:   UInt): UInt = ((x << 1).asUInt() | 1.U) & (~(0.U(1.W) ## x)).asUInt
   def OH1ToUInt(x: UInt): UInt = OHToUInt(OH1ToOH(x))
-  def UIntToOH1(x: UInt, width: Int): UInt = ~(-1.S(width.W).asUInt << x)(width - 1, 0)
+  def UIntToOH1(x: UInt, width: Int): UInt = (~(-1.S(width.W).asUInt << x)(width - 1, 0)).asUInt()
   def UIntToOH1(x: UInt): UInt = UIntToOH1(x, (1 << x.getWidth) - 1)
 
   def trailingZeros(x: Int): Option[Int] = if (x > 0) Some(log2Ceil(x & -x)) else None
@@ -244,6 +248,7 @@ package object misc {
   def leftOR(x: UInt): UInt = leftOR(x, x.getWidth, x.getWidth)
   def leftOR(x: UInt, width: Integer, cap: Integer = 999999): UInt = {
     val stop = min(width, cap)
+    @tailrec
     def helper(s: Int, x: UInt): UInt =
       if (s >= stop) x else helper(s + s, x | (x << s)(width - 1, 0))
     helper(1, x)(width - 1, 0)
@@ -253,21 +258,23 @@ package object misc {
   def rightOR(x: UInt): UInt = rightOR(x, x.getWidth, x.getWidth)
   def rightOR(x: UInt, width: Integer, cap: Integer = 999999): UInt = {
     val stop = min(width, cap)
+    @tailrec
     def helper(s: Int, x: UInt): UInt =
-      if (s >= stop) x else helper(s + s, x | (x >> s))
+      if (s >= stop) x else helper(s + s, x | (x >> s).asUInt())
     helper(1, x)(width - 1, 0)
   }
 
   def OptimizationBarrier[T <: Data](in: T): T = {
-    val barrier = Module(new Module {
+    class Barrier extends Module {
       class BarrierBundle extends Bundle {
-        val x = Input(in)
-        val y = Output(in)
+        val x: T = Input(in)
+        val y: T = Output(in)
       }
-      val io = IO(new BarrierBundle)
+      val io: BarrierBundle = IO(new BarrierBundle)
       io.y := io.x
       override def desiredName = "OptimizationBarrier"
-    })
+    }
+    val barrier: Barrier = Module(new Barrier)
     barrier.io.x := in
     barrier.io.y
   }
