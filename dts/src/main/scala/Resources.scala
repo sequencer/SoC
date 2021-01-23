@@ -10,14 +10,13 @@ import scala.collection.{immutable, mutable}
 
 sealed trait ResourceValue
 
-/** Permission of an address space.
-  * @param r            readable.
-  * @param w            writable.
-  * @param x            executable.
-  * @param c            cacheable.
-  * @param a            supports all atomic operations.
-  */
-case class ResourcePermissions(r: Boolean, w: Boolean, x: Boolean, c: Boolean, a: Boolean) // Not part of DTS
+/** Permission of an address space. */
+case class ResourcePermissions(
+  readable:   Boolean,
+  writeable:  Boolean,
+  executable: Boolean,
+  cacheable:  Boolean,
+  atomic:     Boolean)
 
 /** An address space description.
   * @param address      the address space.
@@ -26,7 +25,10 @@ case class ResourcePermissions(r: Boolean, w: Boolean, x: Boolean, c: Boolean, a
 final case class ResourceAddress(address: Seq[AddressSet], permissions: ResourcePermissions) extends ResourceValue {
   /* For things like SPI which uses simple integer addressing */
   def this(x: Int) =
-    this(Seq(AddressSet(x, 0)), ResourcePermissions(r = false, w = false, x = false, c = false, a = false))
+    this(
+      Seq(AddressSet(x, 0)),
+      ResourcePermissions(readable = false, writeable = false, executable = false, cacheable = false, atomic = false)
+    )
 }
 object ResourceAddress {
   def apply(x: Int) = new ResourceAddress(x)
