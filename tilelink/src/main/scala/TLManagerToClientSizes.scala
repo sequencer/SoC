@@ -4,12 +4,12 @@ import org.chipsalliance.utils.addressing.TransferSizes
 /** Please refer to SiFive TileLink Specification 1.8.1
   *
   * TL-UL
-  * @param accessAckB 7.2.4
-  * @param accessAckDataB 7.2.5
+  * @param accessAckD 7.2.4
+  * @param accessAckDataD 7.2.5
   * TL-UH
   * @param hintAckD 8.2.4
   * TL-C
-  * @param probeBlockB 9.3.3
+  * @param probeBlockB 9.3.3s
   * @param probePermB 9.3.4
   * @param GrantD 9.3.7
   * @param GrantDataD 9.3.8
@@ -23,8 +23,8 @@ import org.chipsalliance.utils.addressing.TransferSizes
   * @param intentB 9.5.8
   */
 case class TLManagerToClientSizes(
-  accessAckB:      TransferSizes = TransferSizes.none,
-  accessAckDataB:  TransferSizes = TransferSizes.none,
+  accessAckD:      TransferSizes = TransferSizes.none,
+  accessAckDataD:  TransferSizes = TransferSizes.none,
   hintAckD:        TransferSizes = TransferSizes.none,
   probeBlockB:     TransferSizes = TransferSizes.none,
   probePermB:      TransferSizes = TransferSizes.none,
@@ -37,10 +37,31 @@ case class TLManagerToClientSizes(
   arithmeticDataB: TransferSizes = TransferSizes.none,
   logicalDataB:    TransferSizes = TransferSizes.none,
   intentB:         TransferSizes = TransferSizes.none) {
+
+  def maxTransferSizeB = List(
+    probeBlockB.max,
+    probePermB.max,
+    getB.max,
+    putFullDataB.max,
+    putPartialDataB.max,
+    arithmeticDataB.max,
+    logicalDataB.max,
+    intentB.max
+  ).max
+
+  def maxTransferSizeD = List(
+    accessAckD.max,
+    accessAckDataD.max,
+    hintAckD.max,
+    GrantD.max,
+    GrantDataD.max,
+    releaseAckD.max
+  ).max
+
   def intersect(that: TLManagerToClientSizes): TLManagerToClientSizes =
     TLManagerToClientSizes(
-      accessAckB.intersect(that.accessAckB),
-      accessAckDataB.intersect(that.accessAckDataB),
+      accessAckD.intersect(that.accessAckD),
+      accessAckDataD.intersect(that.accessAckDataD),
       hintAckD.intersect(that.hintAckD),
       probeBlockB.intersect(that.probeBlockB),
       probePermB.intersect(that.probePermB),
@@ -56,8 +77,8 @@ case class TLManagerToClientSizes(
     )
   def mincover(that: TLManagerToClientSizes): TLManagerToClientSizes =
     TLManagerToClientSizes(
-      accessAckB.mincover(that.accessAckB),
-      accessAckDataB.mincover(that.accessAckDataB),
+      accessAckD.mincover(that.accessAckD),
+      accessAckDataD.mincover(that.accessAckDataD),
       hintAckD.mincover(that.hintAckD),
       probeBlockB.mincover(that.probeBlockB),
       probePermB.mincover(that.probePermB),

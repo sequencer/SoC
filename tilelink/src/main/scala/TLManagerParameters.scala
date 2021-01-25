@@ -18,6 +18,13 @@ case class TLManagerParameters(
   alwaysGrantsT:   Boolean,
   mayDenyGet:      Boolean,
   mayDenyPut:      Boolean) {
+
+  def maxTransferSizeA: Int = supports.maxTransferSizeA
+  def maxTransferSizeB: Int = emits.maxTransferSizeB
+  def maxTransferSizeC: Int = supports.maxTransferSizeC
+  def maxTransferSizeD: Int = emits.maxTransferSizeD
+  def maxTransferSizeE: Int = supports.maxTransferSizeE
+
   private def checkAddress(): Unit = {
     require(address.nonEmpty, s"Address of $this cannot be empty")
     address.foreach { a => require(a.finite, s"Address $this must be finite") }

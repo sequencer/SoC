@@ -14,4 +14,11 @@ case class TLClientParameters(
   supports:          TLManagerToClientSizes,
   emits:             TLClientToManagerSizes,
   neverReleasesData: Boolean,
-  sourceId:          IdRange)
+  sourceId:          IdRange) {
+
+  def maxTransferSizeA: Int = emits.maxTransferSizeA
+  def maxTransferSizeB: Int = supports.maxTransferSizeB
+  def maxTransferSizeC: Int = emits.maxTransferSizeC
+  def maxTransferSizeD: Int = supports.maxTransferSizeD
+  def maxTransferSizeE: Int = emits.maxTransferSizeE
+}

@@ -41,6 +41,31 @@ case class TLClientToManagerSizes(
   accessAckC:      TransferSizes = TransferSizes.none,
   accessAckDataC:  TransferSizes = TransferSizes.none,
   hintAckC:        TransferSizes = TransferSizes.none) {
+  def maxTransferSizeA = List(
+    getA.max,
+    putFullDataA.max,
+    putPartialDataA.max,
+    arithmeticDataA.max,
+    logicDataA.max,
+    intentA.max,
+    acquireBlockA.max,
+    acquirePermA.max
+  ).max
+
+  def maxTransferSizeC = List(
+    probeAckC.max,
+    probeAckDataC.max,
+    releaseC.max,
+    releaseDataC.max,
+    accessAckC.max,
+    accessAckDataC.max,
+    hintAckC.max
+  ).max
+
+  def maxTransferSizeE = List(
+    grantAckE.max
+  ).max
+
   def intersect(that: TLClientToManagerSizes): TLClientToManagerSizes =
     TLClientToManagerSizes(
       getA.intersect(that.getA),
