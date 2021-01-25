@@ -6,5 +6,6 @@ case class TLChannelParameters(
   sourceWidth:  Int = 0,
   sinkWidth:    Int = 0,
   sizeWidth:    Int = 0) {
+  def beatBytes: Int = dataWidth / 8
   def maskWidth: Int = dataWidth / 8
 }

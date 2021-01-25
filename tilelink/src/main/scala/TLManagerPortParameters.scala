@@ -17,7 +17,7 @@ case class TLManagerPortParameters(
   val anySupportPutFullDataA:    Boolean = !anySupportClaims.putFullDataA.none
   val anySupportPutPartialDataA: Boolean = !anySupportClaims.putPartialDataA.none
   val anySupportArithmeticDataA: Boolean = !anySupportClaims.arithmeticDataA.none
-  val anySupportLogicDataA:      Boolean = !anySupportClaims.logicDataA.none
+  val anySupportLogicalDataA:    Boolean = !anySupportClaims.logicalDataA.none
   val anySupportIntentA:         Boolean = !anySupportClaims.intentA.none
   val anySupportAcquireBlockA:   Boolean = !anySupportClaims.acquireBlockA.none
   val anySupportAcquirePermA:    Boolean = !anySupportClaims.acquirePermA.none

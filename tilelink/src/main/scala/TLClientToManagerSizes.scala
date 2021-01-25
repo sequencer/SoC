@@ -9,7 +9,7 @@ import org.chipsalliance.utils.addressing.TransferSizes
   * @param putPartialDataA 7.2.3
   * TL-UH
   * @param arithmeticDataA 8.2.1
-  * @param logicDataA 8.2.2
+  * @param logicalDataA 8.2.2
   * @param intentA 8.2.3
   * TL-C
   * @param acquireBlockA 9.3.1
@@ -29,7 +29,7 @@ case class TLClientToManagerSizes(
   putFullDataA:    TransferSizes = TransferSizes.none,
   putPartialDataA: TransferSizes = TransferSizes.none,
   arithmeticDataA: TransferSizes = TransferSizes.none,
-  logicDataA:      TransferSizes = TransferSizes.none,
+  logicalDataA:    TransferSizes = TransferSizes.none,
   intentA:         TransferSizes = TransferSizes.none,
   acquireBlockA:   TransferSizes = TransferSizes.none,
   acquirePermA:    TransferSizes = TransferSizes.none,
@@ -46,7 +46,7 @@ case class TLClientToManagerSizes(
     putFullDataA.max,
     putPartialDataA.max,
     arithmeticDataA.max,
-    logicDataA.max,
+    logicalDataA.max,
     intentA.max,
     acquireBlockA.max,
     acquirePermA.max
@@ -72,7 +72,7 @@ case class TLClientToManagerSizes(
       putFullDataA.intersect(that.putFullDataA),
       putPartialDataA.intersect(that.putPartialDataA),
       arithmeticDataA.intersect(that.arithmeticDataA),
-      logicDataA.intersect(that.logicDataA),
+      logicalDataA.intersect(that.logicalDataA),
       intentA.intersect(that.intentA),
       acquireBlockA.intersect(that.acquireBlockA),
       acquirePermA.intersect(that.acquirePermA),
@@ -91,7 +91,7 @@ case class TLClientToManagerSizes(
       putFullDataA.mincover(that.putFullDataA),
       putPartialDataA.mincover(that.putPartialDataA),
       arithmeticDataA.mincover(that.arithmeticDataA),
-      logicDataA.mincover(that.logicDataA),
+      logicalDataA.mincover(that.logicalDataA),
       intentA.mincover(that.intentA),
       acquireBlockA.mincover(that.acquireBlockA),
       acquirePermA.mincover(that.acquirePermA),

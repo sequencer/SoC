@@ -45,7 +45,7 @@ case class TLManagerParameters(
         writeable = supportAcquireT || supports.putFullDataA || supports.putPartialDataA,
         executable = executable,
         cacheable = supportAcquireB,
-        atomic = supports.arithmeticDataA && supports.logicDataA
+        atomic = supports.arithmeticDataA && supports.logicalDataA
       )
     )
   }

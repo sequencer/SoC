@@ -1,6 +1,7 @@
 package tilelink
 
 import chisel3._
+import chisel3.experimental.ChiselEnum
 import chisel3.internal.sourceinfo.SourceInfo
 import diplomacy.FormatEdge
 
@@ -11,20 +12,107 @@ case class TLEdge(
     extends FormatEdge {
   override def formatEdge: String = "TODO"
 
+  /** Spec 3.3 */
+  protected def assignA(
+    opcode:  UInt,
+    param:   UInt,
+    size:    UInt,
+    source:  UInt,
+    address: UInt,
+    mask:    UInt,
+    data:    UInt,
+    corrupt: Bool
+  ): TLChannelA = {
+    val a = Wire(new TLChannelA(bundleParameters.a))
+    a.opcode := opcode
+    a.param := param
+    a.size := size
+    a.source := source
+    a.address := address
+    a.mask := mask
+    a.data := data
+    a.corrupt := corrupt
+    a
+  }
+
+  /** Spec 3.4 */
+  protected def assignB(
+    opcode:  UInt,
+    param:   UInt,
+    size:    UInt,
+    source:  UInt,
+    address: UInt,
+    mask:    UInt,
+    data:    UInt,
+    corrupt: Bool
+  ): TLChannelB = {
+    val b = Wire(new TLChannelB(bundleParameters.b.get))
+    b.opcode := opcode
+    b.param := param
+    b.size := size
+    b.source := source
+    b.address := address
+    b.mask := mask
+    b.data := data
+    b.corrupt := corrupt
+    b
+  }
+
+  /** Spec 3.5 */
+  protected def assignC(
+    opcode:  UInt,
+    param:   UInt,
+    size:    UInt,
+    source:  UInt,
+    address: UInt,
+    data:    UInt,
+    corrupt: Bool
+  ): TLChannelC = {
+    val c = Wire(new TLChannelC(bundleParameters.c.get))
+    c.opcode := opcode
+    c.param := param
+    c.size := size
+    c.source := source
+    c.address := address
+    c.data := data
+    c.corrupt := corrupt
+    c
+  }
+
+  /** Spec 3.6 */
+  protected def assignD(
+    opcode:  UInt,
+    param:   UInt,
+    size:    UInt,
+    source:  UInt,
+    sink:    UInt,
+    denied:  UInt,
+    data:    UInt,
+    corrupt: Bool
+  ): TLChannelD = {
+    val d = Wire(new TLChannelD(bundleParameters.d))
+    d.opcode := opcode
+    d.param := param
+    d.size := size
+    d.source := source
+    d.sink := sink
+    d.denied := denied
+    d.data := data
+    d.corrupt := corrupt
+    d
+  }
+
+  /** Spec 3.7 */
+  protected def assignE(
+    sink: UInt
+  ): TLChannelE = {
+    val e = Wire(new TLChannelE(bundleParameters.e.get))
+    e.sink := sink
+    e
+  }
+
   val bundleParameters: TLBundleParameters = TLBundleParameters(clientPortParameters, managerPortParameters)
 }
-
-class TLEdgeOut(
-  clientPortParameters:  TLClientPortParameters,
-  managerPortParameters: TLManagerPortParameters,
-  sourceInfo:            SourceInfo)
-    extends TLEdge(clientPortParameters, managerPortParameters, sourceInfo)
-
-class TLEdgeIn(
-  clientPortParameters:  TLClientPortParameters,
-  managerPortParameters: TLManagerPortParameters,
-  sourceInfo:            SourceInfo)
-    extends TLEdge(clientPortParameters, managerPortParameters, sourceInfo)
 
 object TLOpcode {
   val Get:            UInt = 4.U
@@ -47,4 +135,62 @@ object TLOpcode {
   val Release:        UInt = 6.U
   val ReleaseData:    UInt = 7.U
   val ReleaseAck:     UInt = 6.U
+}
+
+/** TileLink Spec 1.8.1
+  * Table 23
+  */
+object ArithmeticDataParam extends ChiselEnum {
+  val MIN:  ArithmeticDataParam.Type = Value(0.U)
+  val MAX:  ArithmeticDataParam.Type = Value(1.U)
+  val MINU: ArithmeticDataParam.Type = Value(2.U)
+  val MAXU: ArithmeticDataParam.Type = Value(3.U)
+  val ADD:  ArithmeticDataParam.Type = Value(4.U)
+}
+
+/** TileLink Spec 1.8.1
+  * Table 25
+  */
+object LogicalDataParam extends ChiselEnum {
+  val XOR:  LogicalDataParam.Type = Value(0.U)
+  val OR:   LogicalDataParam.Type = Value(1.U)
+  val AND:  LogicalDataParam.Type = Value(2.U)
+  val SWAP: LogicalDataParam.Type = Value(3.U)
+}
+
+object IntentParam extends ChiselEnum {
+  val PrefetchRead:  IntentParam.Type = Value(0.U)
+  val PrefetchWrite: IntentParam.Type = Value(1.U)
+}
+
+/** TileLink Spec 1.8.1
+  * Table 31 Cap
+  */
+object CapParam extends ChiselEnum {
+  val toT: CapParam.Type = Value(0.U)
+  val toB: CapParam.Type = Value(1.U)
+  val toN: CapParam.Type = Value(2.U)
+}
+
+/** TileLink Spec 1.8.1
+  * Table 31 Grow
+  */
+object GrowParam extends ChiselEnum {
+  val NtoB: GrowParam.Type = Value(0.U)
+  val NtoT: GrowParam.Type = Value(1.U)
+  val BtoT: GrowParam.Type = Value(2.U)
+}
+
+/** TileLink Spec 1.8.1
+  * Table 31 Prune & Report
+  * param can be PruneParam or ReportParam, since it's tricky to implement a union type in Scala 2
+  * these should be refactored into one function after Chisel supports Scala 3 in the future.
+  */
+object PruneReportParam extends ChiselEnum {
+  val TtoB: PruneReportParam.Type = Value(0.U)
+  val TtoN: PruneReportParam.Type = Value(1.U)
+  val BtoN: PruneReportParam.Type = Value(2.U)
+  val TtoT: PruneReportParam.Type = Value(3.U)
+  val BtoB: PruneReportParam.Type = Value(4.U)
+  val NtoN: PruneReportParam.Type = Value(5.U)
 }
