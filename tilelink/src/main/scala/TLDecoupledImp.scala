@@ -1,7 +1,7 @@
 package tilelink
 
 import chisel3.internal.sourceinfo.SourceInfo
-import diplomacy.{NodeImp, RenderedEdge}
+import diplomacy.{InwardNode, NodeImp, OutwardNode, RenderedEdge}
 
 object TLDecoupledImp
     extends NodeImp[TLClientPortParameters, TLManagerPortParameters, TLEdgeOut, TLEdgeIn, TLDecoupledBundle] {
@@ -17,7 +17,13 @@ object TLDecoupledImp
 
   def render(ei: TLEdgeIn): RenderedEdge =
     RenderedEdge(
-      colour = "#000000" /* black */,
+      colour = "#000000" ss,
       label = (ei.managerPortParameters.channelBeatBytes.members.flatten.max * 8).toString
     )
+
+  override def mixO(pd: TLClientPortParameters, node: OutwardNode[TLClientPortParameters, TLManagerPortParameters, TLDecoupledBundle]): TLClientPortParameters  =
+    pd.copy(clients = pd.clients.map {c => c.copy(nodePath = node +: c.nodePath)})
+  override def mixI(pu: TLManagerPortParameters, node: InwardNode[TLClientPortParameters, TLManagerPortParameters, TLDecoupledBundle]): TLManagerPortParameters =
+    pu.copy(managers = pu.managers.map { m => m.copy (nodePath = node +: m.nodePath) })
+
 }

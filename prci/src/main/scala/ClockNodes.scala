@@ -39,9 +39,9 @@ case class ClockAdapterNode(
   implicit valName: sourcecode.Name)
     extends AdapterNode(ClockImp)(sourceFn, sinkFn)
 
-case class ClockIdentityNode()(implicit valName: sourcecode.Name) extends IdentityNode(ClockImp)()
+case class ClockIdentityNode()(implicit valName: sourcecode.Name) extends IdentityNode(ClockImp)
 
-case class ClockEphemeralNode()(implicit valName: sourcecode.Name) extends EphemeralNode(ClockImp)()
+case class ClockEphemeralNode()(implicit valName: sourcecode.Name) extends EphemeralNode(ClockImp)
 
 object ClockNameNode {
   def apply(name: sourcecode.Name): ClockIdentityNode = ClockIdentityNode()(name)
@@ -125,6 +125,6 @@ case class ClockGroupAdapterNode(
   implicit valName: sourcecode.Name)
     extends AdapterNode(ClockGroupImp)(sourceFn, sinkFn)
 
-case class ClockGroupIdentityNode()(implicit valName: sourcecode.Name) extends IdentityNode(ClockGroupImp)()
+case class ClockGroupIdentityNode()(implicit valName: sourcecode.Name) extends IdentityNode(ClockGroupImp)
 
-case class ClockGroupEphemeralNode()(implicit valName: sourcecode.Name) extends EphemeralNode(ClockGroupImp)()
+case class ClockGroupEphemeralNode()(implicit valName: sourcecode.Name) extends EphemeralNode(ClockGroupImp)
