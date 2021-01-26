@@ -1,8 +1,10 @@
 package tilelink
 
+/**
+  * @note [[TLChannelBeatBytes]] is provided by [[TLManagerPortParameters]]
+  */
 case class TLClientPortParameters(
-  clients:          Seq[TLClientParameters],
-  channelBeatBytes: TLChannelBeatBytes) {
+  clients: Seq[TLClientParameters]) {
   def endSourceId: Int = clients.map(_.sourceId.end).max
 
   def maxTransferSizeA: Int = clients.map(_.maxTransferSizeA).max

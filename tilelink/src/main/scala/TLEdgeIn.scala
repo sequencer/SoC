@@ -8,6 +8,8 @@ class TLEdgeIn(
   managerPortParameters: TLManagerPortParameters,
   sourceInfo:            SourceInfo)
     extends TLEdge(clientPortParameters, managerPortParameters, sourceInfo) {
+
+  /** Spec 7.2.4 */
   def AccessAckD(
     size:   UInt,
     source: UInt,
@@ -29,6 +31,8 @@ class TLEdgeIn(
       corrupt = false.B
     )
   }
+
+  /** Spec 7.2.5 */
   def AccessAckDataD(
     size:    UInt,
     source:  UInt,
@@ -53,6 +57,8 @@ class TLEdgeIn(
     )
 
   }
+
+  /** Spec 8.2.4 */
   def HintAckD(
     size:   UInt,
     source: UInt,
@@ -75,6 +81,8 @@ class TLEdgeIn(
     )
 
   }
+
+  /** Spec 9.3.3 */
   def ProbeBlockB(
     size:    UInt,
     param:   GrowParam.Type,
@@ -98,6 +106,8 @@ class TLEdgeIn(
       corrupt = false.B
     )
   }
+
+  /** Spec 9.3.2 */
   def ProbePermB(
     size:    UInt,
     param:   CapParam.Type,
@@ -121,6 +131,8 @@ class TLEdgeIn(
       corrupt = false.B
     )
   }
+
+  /** Spec 9.3.7 */
   def GrantD(
     size:   UInt,
     param:  CapParam.Type,
@@ -144,6 +156,8 @@ class TLEdgeIn(
       corrupt = false.B
     )
   }
+
+  /** Spec 9.3.8 */
   def GrantDataD(
     size:    UInt,
     param:   CapParam.Type,
@@ -169,6 +183,8 @@ class TLEdgeIn(
       corrupt = corrupt
     )
   }
+
+  /** Spec 9.3.12 */
   def ReleaseAckD(
     size:   UInt,
     source: UInt
@@ -189,6 +205,8 @@ class TLEdgeIn(
       corrupt = false.B
     )
   }
+
+  /** Spec 9.5.1 */
   def GetB(
     size:    UInt,
     source:  UInt,
@@ -211,6 +229,8 @@ class TLEdgeIn(
       corrupt = false.B
     )
   }
+
+  /** Spec 9.5.2 */
   def PutFullDataB(
     size:    UInt,
     source:  UInt,
@@ -235,6 +255,8 @@ class TLEdgeIn(
       corrupt = corrupt
     )
   }
+
+  /** Spec 9.5.3 */
   def PutPartialDataB(
     size:    UInt,
     source:  UInt,
@@ -259,6 +281,8 @@ class TLEdgeIn(
       corrupt = corrupt
     )
   }
+
+  /** Spec 9.5.6 */
   def ArithmeticDataB(
     size:    UInt,
     param:   ArithmeticDataParam.Type,
@@ -284,6 +308,8 @@ class TLEdgeIn(
       corrupt = corrupt
     )
   }
+
+  /** Spec 9.5.7 */
   def LogicalDataB(
     size:    UInt,
     param:   LogicalDataParam.Type,
@@ -309,6 +335,8 @@ class TLEdgeIn(
       corrupt = corrupt
     )
   }
+
+  /** Spec 9.5.8 */
   def IntentB(
     size:    UInt,
     param:   IntentParam.Type,

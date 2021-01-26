@@ -58,6 +58,8 @@ class TLEdgeOut(
       corrupt = corrupt
     )
   }
+
+  /** Spec 7.2.3 */
   def PutPartialDataA(
     size:    UInt,
     source:  UInt,
@@ -82,6 +84,8 @@ class TLEdgeOut(
       corrupt = corrupt
     )
   }
+
+  /** Spec 8.2.1 */
   def ArithmeticDataA(
     size:    UInt,
     param:   ArithmeticDataParam.Type,
@@ -107,6 +111,8 @@ class TLEdgeOut(
       corrupt = corrupt
     )
   }
+
+  /** Spec 8.2.2 */
   def LogicalDataA(
     size:    UInt,
     param:   ArithmeticDataParam.Type,
@@ -132,6 +138,8 @@ class TLEdgeOut(
       corrupt = corrupt
     )
   }
+
+  /** Spec 8.2.3 */
   def IntentA(
     size:    UInt,
     param:   IntentParam.Type,
@@ -157,6 +165,8 @@ class TLEdgeOut(
       corrupt = corrupt
     )
   }
+
+  /** Spec 9.3.1 */
   def AcquireBlockA(
     size:    UInt,
     param:   GrowParam.Type,
@@ -180,6 +190,8 @@ class TLEdgeOut(
       corrupt = false.B
     )
   }
+
+  /** Spec 9.3.2 */
   def AcquirePermA(
     size:    UInt,
     param:   GrowParam.Type,
@@ -204,6 +216,7 @@ class TLEdgeOut(
     )
   }
 
+  /** Spec 9.3.5 */
   def ProbeAckC(
     size:    UInt,
     param:   PruneReportParam.Type,
@@ -226,6 +239,7 @@ class TLEdgeOut(
     )
   }
 
+  /** Spec 9.3.6 */
   def ProbeAckDataC(
     size:    UInt,
     param:   PruneReportParam.Type,
@@ -250,6 +264,7 @@ class TLEdgeOut(
     )
   }
 
+  /** Spec 9.3.9 */
   def GrantAckE(
     sink: UInt
   ): TLChannelE = {
@@ -262,6 +277,8 @@ class TLEdgeOut(
       sink = sink
     )
   }
+
+  /** Spec 9.3.10 */
   def ReleaseC(
     size:    UInt,
     param:   PruneReportParam.Type,
@@ -283,6 +300,8 @@ class TLEdgeOut(
       corrupt = false.B
     )
   }
+
+  /** Spec 9.3.11 */
   def ReleaseDataC(
     size:    UInt,
     param:   PruneReportParam.Type,
@@ -307,6 +326,7 @@ class TLEdgeOut(
     )
   }
 
+  /** Spec 9.5.4 */
   def AccessAckC(
     size:    UInt,
     source:  UInt,
@@ -327,6 +347,8 @@ class TLEdgeOut(
       corrupt = false.B
     )
   }
+
+  /** Spec 9.5.5 */
   def AccessAckDataC(
     size:    UInt,
     source:  UInt,
@@ -349,6 +371,8 @@ class TLEdgeOut(
       corrupt = corrupt
     )
   }
+
+  /** Spec 9.5.9 */
   def HintAckC(
     size:    UInt,
     source:  UInt,
