@@ -105,6 +105,12 @@ class tilelink extends UtilityModule {
   override def moduleDeps = super.moduleDeps ++ Seq(diplomacyUtility, crossing, dts, misc, verification, prci, regmapper)
 }
 
+object uncore extends uncore 
+class uncore extends UtilityModule {
+  override def moduleDeps = super.moduleDeps ++ Seq(tilelink)
+}
+
+
 object playground extends playground
 class playground extends UtilityModule {
   override def moduleDeps = super.moduleDeps ++ Seq(diplomacyUtility)
