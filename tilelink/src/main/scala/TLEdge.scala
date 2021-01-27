@@ -3,14 +3,42 @@ package tilelink
 import chisel3._
 import chisel3.experimental.ChiselEnum
 import chisel3.internal.sourceinfo.SourceInfo
+import chisel3.util.log2Ceil
 import diplomacy.FormatEdge
+import org.chipsalliance.utils.misc.UIntToOH1
 
+import math.max
 case class TLEdge(
   clientPortParameters:  TLClientPortParameters,
   managerPortParameters: TLManagerPortParameters,
   sourceInfo:            SourceInfo)
     extends FormatEdge {
   override def formatEdge: String = "TODO"
+
+  def opcode(channel:  TLOpcodeChannel):  UInt = channel.opcode
+  def param(channel:   TLOpcodeChannel):  UInt = channel.param
+  def data(channel:    TLDataChannel):    UInt = channel.data
+  def size(channel:    TLDataChannel):    UInt = channel.size
+  def corrupt(channel: TLDataChannel):    Bool = channel.corrupt
+  def mask(channel:    TLMaskChannel):    UInt = channel.mask
+  def address(channel: TLAddressChannel): UInt = channel.address
+  def source(channel:  TLSourceChannel):  UInt = channel.source
+
+  def maxTransferSize(channel: TLChannel): Int = channel match {
+    case _: TLChannelA => max(clientPortParameters.maxTransferSizeA, managerPortParameters.maxTransferSizeA)
+    case _: TLChannelB => max(clientPortParameters.maxTransferSizeB, managerPortParameters.maxTransferSizeB)
+    case _: TLChannelC => max(clientPortParameters.maxTransferSizeC, managerPortParameters.maxTransferSizeC)
+    case _: TLChannelD => max(clientPortParameters.maxTransferSizeD, managerPortParameters.maxTransferSizeD)
+    case _: TLChannelE => 0
+  }
+
+  def beatBytes(channel: TLChannel): Int = channel match {
+    case _: TLChannelA => managerPortParameters.channelBeatBytes.a
+    case _: TLChannelB => managerPortParameters.channelBeatBytes.b
+    case _: TLChannelC => managerPortParameters.channelBeatBytes.c
+    case _: TLChannelD => managerPortParameters.channelBeatBytes.d
+    case _: TLChannelE => 0
+  }
 
   /** Spec 3.3 */
   protected def assignA(

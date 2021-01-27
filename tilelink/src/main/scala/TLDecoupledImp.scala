@@ -17,8 +17,8 @@ object TLDecoupledImp
 
   def render(ei: TLEdgeIn): RenderedEdge =
     RenderedEdge(
-      colour = "#000000" ss,
-      label = (ei.managerPortParameters.channelBeatBytes.members.flatten.max * 8).toString
+      colour = "#000000",
+      label = (ei.managerPortParameters.channelBeatBytes.members.max * 8).toString
     )
 
   override def mixO(pd: TLClientPortParameters, node: OutwardNode[TLClientPortParameters, TLManagerPortParameters, TLDecoupledBundle]): TLClientPortParameters  =

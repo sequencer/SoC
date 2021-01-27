@@ -27,14 +27,14 @@ object TLBundleParameters {
       TLBundleParameters(
         TLChannelParameters(
           addressWidth = log2Up(manager.maxAddress + 1),
-          dataWidth = manager.channelBeatBytes.a.get * 8,
+          dataWidth = manager.channelBeatBytes.a * 8,
           sourceWidth = log2Up(client.endSourceId),
           sizeWidth = log2Up(log2Ceil(max(client.maxTransferSizeA, manager.maxTransferSizeA)) + 1)
         ),
         None,
         None,
         TLChannelParameters(
-          dataWidth = manager.channelBeatBytes.d.get * 8,
+          dataWidth = manager.channelBeatBytes.d * 8,
           sourceWidth = log2Up(client.endSourceId),
           sinkWidth = log2Up(manager.endSinkId),
           sizeWidth = log2Up(log2Ceil(max(client.maxTransferSizeC, manager.maxTransferSizeC)) + 1)
@@ -45,14 +45,14 @@ object TLBundleParameters {
       TLBundleParameters(
         TLChannelParameters(
           addressWidth = log2Up(manager.maxAddress + 1),
-          dataWidth = manager.channelBeatBytes.a.get * 8,
+          dataWidth = manager.channelBeatBytes.a * 8,
           sourceWidth = log2Up(client.endSourceId),
           sizeWidth = log2Up(log2Ceil(max(client.maxTransferSizeA, manager.maxTransferSizeA)) + 1)
         ),
         Some(
           TLChannelParameters(
             addressWidth = log2Up(manager.maxAddress + 1),
-            dataWidth = manager.channelBeatBytes.b.get * 8,
+            dataWidth = manager.channelBeatBytes.b * 8,
             sourceWidth = log2Up(client.endSourceId),
             sizeWidth = log2Up(log2Ceil(max(client.maxTransferSizeB, manager.maxTransferSizeB)) + 1)
           )
@@ -60,14 +60,14 @@ object TLBundleParameters {
         Some(
           TLChannelParameters(
             addressWidth = log2Up(manager.maxAddress + 1),
-            dataWidth = manager.channelBeatBytes.c.get * 8,
+            dataWidth = manager.channelBeatBytes.c * 8,
             sourceWidth = log2Up(client.endSourceId),
             sinkWidth = log2Up(manager.endSinkId),
             sizeWidth = log2Up(log2Ceil(max(client.maxTransferSizeC, manager.maxTransferSizeC)) + 1)
           )
         ),
         TLChannelParameters(
-          dataWidth = manager.channelBeatBytes.d.get * 8,
+          dataWidth = manager.channelBeatBytes.d * 8,
           sourceWidth = log2Up(client.endSourceId),
           sinkWidth = log2Up(manager.endSinkId),
           sizeWidth = log2Up(log2Ceil(max(client.maxTransferSizeD, manager.maxTransferSizeD)) + 1)

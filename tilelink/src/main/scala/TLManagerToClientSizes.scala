@@ -23,20 +23,20 @@ import org.chipsalliance.utils.addressing.TransferSizes
   * @param intentB 9.5.8
   */
 case class TLManagerToClientSizes(
-  accessAckD:      TransferSizes = TransferSizes.none,
-  accessAckDataD:  TransferSizes = TransferSizes.none,
-  hintAckD:        TransferSizes = TransferSizes.none,
-  probeBlockB:     TransferSizes = TransferSizes.none,
-  probePermB:      TransferSizes = TransferSizes.none,
-  GrantD:          TransferSizes = TransferSizes.none,
-  GrantDataD:      TransferSizes = TransferSizes.none,
-  releaseAckD:     TransferSizes = TransferSizes.none,
-  getB:            TransferSizes = TransferSizes.none,
-  putFullDataB:    TransferSizes = TransferSizes.none,
-  putPartialDataB: TransferSizes = TransferSizes.none,
-  arithmeticDataB: TransferSizes = TransferSizes.none,
-  logicalDataB:    TransferSizes = TransferSizes.none,
-  intentB:         TransferSizes = TransferSizes.none) {
+    accessAckD:      TransferSizes = TransferSizes.none,
+    accessAckDataD:  TransferSizes = TransferSizes.none,
+    hintAckD:        TransferSizes = TransferSizes.none,
+    probeBlockB:     TransferSizes = TransferSizes.none,
+    probePermB:      TransferSizes = TransferSizes.none,
+    GrantD:          TransferSizes = TransferSizes.none,
+    GrantDataD:      TransferSizes = TransferSizes.none,
+    releaseAckD:     TransferSizes = TransferSizes.none,
+    getB:            TransferSizes = TransferSizes.none,
+    putFullDataB:    TransferSizes = TransferSizes.none,
+    putPartialDataB: TransferSizes = TransferSizes.none,
+    arithmeticDataB: TransferSizes = TransferSizes.none,
+    logicalDataB:    TransferSizes = TransferSizes.none,
+    intentB:         TransferSizes = TransferSizes.none) {
 
   def maxTransferSizeB = List(
     probeBlockB.max,

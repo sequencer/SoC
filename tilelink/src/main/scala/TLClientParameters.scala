@@ -11,14 +11,30 @@ case class TLClientParameters(
   unusedRegionTypes: Set[RegionType.T],
   executesOnly:      Boolean,
   requestFifo:       Boolean,
-  supports:          TLManagerToClientSizes,
-  emits:             TLClientToManagerSizes,
+  supports:          Set[ManagerToClientTransaction],
+  emits:             Set[ClientToManagerTransaction],
   neverReleasesData: Boolean,
   sourceId:          IdRange) {
+  val name: String = setName.orElse(nodePath.lastOption.map(_.lazyModule.name)).getOrElse("disconnected")
 
-  def maxTransferSizeA: Int = emits.maxTransferSizeA
-  def maxTransferSizeB: Int = supports.maxTransferSizeB
-  def maxTransferSizeC: Int = emits.maxTransferSizeC
-  def maxTransferSizeD: Int = supports.maxTransferSizeD
-  def maxTransferSizeE: Int = emits.maxTransferSizeE
+  def maxTransferSizeA: Int = emits.collect {
+    case a: ChannelATransaction => a
+  }.collect {
+    case t: HasTransferSizes => t.transferSizes.max
+  }.max
+  def maxTransferSizeB: Int = supports.collect {
+    case c: ChannelBTransaction => c
+  }.collect {
+    case t: HasTransferSizes => t.transferSizes.max
+  }.max
+  def maxTransferSizeC: Int = emits.collect {
+    case c: ChannelCTransaction => c
+  }.collect {
+    case t: HasTransferSizes => t.transferSizes.max
+  }.max
+  def maxTransferSizeD: Int = supports.collect {
+    case d: ChannelDTransaction => d
+  }.collect {
+    case t: HasTransferSizes => t.transferSizes.max
+  }.max
 }
