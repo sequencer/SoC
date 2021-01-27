@@ -29,7 +29,7 @@ def getVersion(dep: String, org: String = "edu.berkeley.cs", cross: Boolean = fa
     ivy"$org::$dep:$version"
 }
 
-trait UtilityModule extends ScalaModule with SbtModule with ScalafmtModule with PublishModule {
+trait UtilityModule extends ScalaModule with ScalafmtModule with PublishModule {
   def scalaVersion = defaultVersions("scala")
 
   def publishVersion = "0.1-SNAPSHOT"
