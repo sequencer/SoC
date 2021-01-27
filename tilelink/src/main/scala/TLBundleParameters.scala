@@ -5,16 +5,37 @@ import chisel3.util.{log2Ceil, log2Up}
 import scala.math.max
 
 case class TLBundleParameters(
-  a: TLChannelParameters,
-  b: Option[TLChannelParameters],
-  c: Option[TLChannelParameters],
-  d: TLChannelParameters,
-  e: Option[TLChannelParameters]) {
+  a: TLChannelParameters = TLChannelParameters(),
+  b: Option[TLChannelParameters] = None,
+  c: Option[TLChannelParameters] = None,
+  d: TLChannelParameters = TLChannelParameters(),
+  e: Option[TLChannelParameters] = None) {
   require(
     (b.isDefined && c.isDefined && e.isDefined) || (b.isEmpty && c.isEmpty && e.isEmpty),
     "only AD/ABCDE channels is allowed."
   )
   def isTLC: Boolean = b.isDefined && c.isDefined && e.isDefined
+
+  private def unionOptionChannel(
+    channel0: Option[TLChannelParameters],
+    channel1: Option[TLChannelParameters]
+  ): Option[TLChannelParameters] =
+    (channel0, channel1) match {
+      case (Some(bp0), Some(bp1)) => Some(bp0.union(bp1))
+      case (Some(bp0), None)      => Some(bp0)
+      case (None, Some(bp1))      => Some(bp1)
+      case (None, None)           => None
+    }
+  def union(that: TLBundleParameters) = {
+    TLBundleParameters(
+      a.union(that.a),
+      unionOptionChannel(b, that.b),
+      unionOptionChannel(c, that.c),
+      d.union(that.d),
+      unionOptionChannel(e, that.e)
+    )
+  }
+
 }
 
 object TLBundleParameters {
@@ -78,4 +99,5 @@ object TLBundleParameters {
           )
         )
       )
+  def union(x: Seq[TLBundleParameters]) = x.reduce((x, y) => x.union(y))
 }

@@ -32,12 +32,112 @@ case class TLEdge(
     case _: TLChannelE => 0
   }
 
+  def maxLogTransferSize(channel: TLChannel): Int = log2Ceil(maxTransferSize(channel))
+
   def beatBytes(channel: TLChannel): Int = channel match {
     case _: TLChannelA => managerPortParameters.channelBeatBytes.a
     case _: TLChannelB => managerPortParameters.channelBeatBytes.b
     case _: TLChannelC => managerPortParameters.channelBeatBytes.c
     case _: TLChannelD => managerPortParameters.channelBeatBytes.d
     case _: TLChannelE => 0
+  }
+
+  /** @todo doc this. */
+  def numBeats1(x: TLChannel): UInt = {
+    x match {
+      case _:       TLChannelE => 0.U
+      case channel: TLDataChannel => {
+        if (maxLogTransferSize(x) == 0)
+          0.U
+        else {
+          val decode = (UIntToOH1(size(channel), maxLogTransferSize(x)) >> log2Ceil(beatBytes(channel))).asUInt()
+          Mux(hasData(channel), decode, 0.U)
+        }
+      }
+    }
+  }
+
+  def hasData(x: TLChannel): Bool = {
+    val opdata = x match {
+      //    opcode === TLMessages.PutFullData    ||
+      //    opcode === TLMessages.PutPartialData ||
+      //    opcode === TLMessages.ArithmeticData ||
+      //    opcode === TLMessages.LogicalData
+      case a: TLChannelA => !a.opcode(2)
+      //    opcode === TLMessages.PutFullData    ||
+      //    opcode === TLMessages.PutPartialData ||
+      //    opcode === TLMessages.ArithmeticData ||
+      //    opcode === TLMessages.LogicalData
+      case b: TLChannelB => !b.opcode(2)
+      //    opcode === TLMessages.AccessAckData ||
+      //    opcode === TLMessages.ProbeAckData  ||
+      //    opcode === TLMessages.ReleaseData
+      case c: TLChannelC => c.opcode(0)
+      //    opcode === TLMessages.AccessAckData ||
+      //    opcode === TLMessages.GrantData
+      case d: TLChannelD => d.opcode(0)
+      case e: TLChannelE => false.B
+    }
+    staticHasData(x).map(_.B).getOrElse(opdata)
+  }
+
+  def staticHasData(bundle: TLChannel): Option[Boolean] = {
+    bundle match {
+      case _: TLChannelA =>
+        // Do there exist A messages with Data?
+        val aDataYes = managerPortParameters.anySupportArithmeticDataA ||
+          managerPortParameters.anySupportLogicalDataA ||
+          managerPortParameters.anySupportPutFullDataA ||
+          managerPortParameters.anySupportPutPartialDataA
+        // Do there exist A messages without Data?
+        val aDataNo = managerPortParameters.anySupportAcquiredB ||
+          managerPortParameters.anySupportGetA ||
+          managerPortParameters.anySupportIntentA
+        // Statically optimize the case where hasData is a constant
+        if (!aDataYes) Some(false) else if (!aDataNo) Some(true) else None
+      case _: TLChannelB =>
+        // Do there exist B messages with Data?
+        val bDataYes = clientPortParameters.anySupportArithmeticDataB ||
+          clientPortParameters.anySupportLogicalDataB ||
+          clientPortParameters.anySupportPutFullDataB ||
+          clientPortParameters.anySupportPutPartialDataB
+        // Do there exist B messages without Data?
+        val bDataNo = clientPortParameters.anySupportProbe ||
+          clientPortParameters.anySupportGetB ||
+          clientPortParameters.anySupportIntentB
+        // Statically optimize the case where hasData is a constant
+        if (!bDataYes) Some(false) else if (!bDataNo) Some(true) else None
+      case _: TLChannelC =>
+        // Do there exist C messages with Data?
+        val cDataYes =
+          clientPortParameters.anySupportGetB ||
+            clientPortParameters.anySupportArithmeticDataB ||
+            clientPortParameters.anySupportLogicalDataB ||
+            clientPortParameters.anySupportProbe
+        // Do there exist C messages without Data?
+        val cDataNo =
+          clientPortParameters.anySupportPutFullDataB ||
+            clientPortParameters.anySupportPutPartialDataB ||
+            clientPortParameters.anySupportIntentB ||
+            clientPortParameters.anySupportProbe
+        if (!cDataYes) Some(false) else if (!cDataNo) Some(true) else None
+      case _: TLChannelD =>
+        // Do there exist D messages with Data?
+        val dDataYes =
+          managerPortParameters.anySupportGetA ||
+            managerPortParameters.anySupportArithmeticDataA ||
+            managerPortParameters.anySupportLogicalDataA ||
+            managerPortParameters.anySupportAcquiredB
+        // Do there exist D messages without Data?
+        val dDataNo =
+          managerPortParameters.anySupportPutFullDataA ||
+            managerPortParameters.anySupportPutPartialDataA ||
+            managerPortParameters.anySupportIntentA ||
+            managerPortParameters.anySupportAcquiredT
+        if (!dDataYes) Some(false) else if (!dDataNo) Some(true) else None
+
+      case _: TLChannelE => Some(false)
+    }
   }
 
   /** Spec 3.3 */

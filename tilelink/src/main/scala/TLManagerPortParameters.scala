@@ -132,6 +132,14 @@ case class TLManagerPortParameters(
     }
     .reduce(_ || _)
 
+  val anySupportAcquiredT: Boolean = managers
+    .flatMap(_.supports)
+    .map {
+      case a: AcquirePermA  => a.BtoT || a.NtoT
+      case a: AcquireBlockA => a.BtoT || a.NtoT
+      case _ => false
+    }
+    .reduce(_ || _)
 
   val maxAddress: BigInt = managers.map(_.maxAddress).max
 }
