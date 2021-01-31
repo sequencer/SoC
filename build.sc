@@ -11,6 +11,7 @@ import $file.diplomacy.build
 val defaultVersions = Map(
   "chisel3" -> "3.4.1",
   "chisel3-plugin" -> "3.4.1",
+  "chiseltest" -> "0.2.3",
   "scala" -> "2.12.12"
 )
 
@@ -108,6 +109,11 @@ class tilelink extends UtilityModule {
 object uncore extends uncore 
 class uncore extends UtilityModule {
   override def moduleDeps = super.moduleDeps ++ Seq(tilelink)
+  def ivyDeps = Agg(ivy"com.lihaoyi::pprint:0.6.0")
+  object test extends Tests {
+    def ivyDeps = Agg(ivy"com.lihaoyi::utest:0.7.7", getVersion("chiseltest"))
+    def testFrameworks = Seq("utest.runner.Framework")
+  }
 }
 
 

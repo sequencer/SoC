@@ -4,8 +4,8 @@ import chisel3._
 import chisel3.internal.sourceinfo.SourceInfo
 
 class TLEdgeOut(
-  clientPortParameters:  TLClientPortParameters,
-  managerPortParameters: TLManagerPortParameters,
+  clientPortParameters:  TLMasterPortParameters,
+  managerPortParameters: TLSlavePortParameters,
   sourceInfo:            SourceInfo)
     extends TLEdge(clientPortParameters, managerPortParameters, sourceInfo) {
 
@@ -17,9 +17,9 @@ class TLEdgeOut(
     mask:    UInt
   ): TLChannelA = {
     require(
-      managerPortParameters.anySupportGetA,
+      managerPortParameters.supports[GetA].nonEmpty,
       s"""No managers visible from this edge support Get in A channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignA(
       opcode = TLOpcode.Get,
@@ -43,9 +43,9 @@ class TLEdgeOut(
     corrupt: Bool
   ): TLChannelA = {
     require(
-      managerPortParameters.anySupportPutFullDataA,
+      managerPortParameters.supports[PutFullDataA].nonEmpty,
       s"""No managers visible from this edge support PutFullData in A channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignA(
       opcode = TLOpcode.PutFullData,
@@ -69,9 +69,9 @@ class TLEdgeOut(
     corrupt: Bool
   ): TLChannelA = {
     require(
-      managerPortParameters.anySupportPutPartialDataA,
+      managerPortParameters.supports[PutPartialDataA].nonEmpty,
       s"""No managers visible from this edge support PutPartialData in A channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignA(
       opcode = TLOpcode.PutPartialData,
@@ -96,9 +96,9 @@ class TLEdgeOut(
     corrupt: Bool
   ): TLChannelA = {
     require(
-      managerPortParameters.anySupportArithmeticDataA,
+      managerPortParameters.supports[ArithmeticDataA].nonEmpty,
       s"""No managers visible from this edge support ArithmeticData in A channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignA(
       opcode = TLOpcode.ArithmeticData,
@@ -123,9 +123,9 @@ class TLEdgeOut(
     corrupt: Bool
   ): TLChannelA = {
     require(
-      managerPortParameters.anySupportLogicalDataA,
+      managerPortParameters.supports[LogicalDataA].nonEmpty,
       s"""No managers visible from this edge support LogicalData in A channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignA(
       opcode = TLOpcode.ArithmeticData,
@@ -150,9 +150,9 @@ class TLEdgeOut(
     corrupt: Bool
   ): TLChannelA = {
     require(
-      managerPortParameters.anySupportIntentA,
+      managerPortParameters.supports[IntentA].nonEmpty,
       s"""No managers visible from this edge support Intent in A channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignA(
       opcode = TLOpcode.Intent,
@@ -175,9 +175,9 @@ class TLEdgeOut(
     mask:    UInt
   ): TLChannelA = {
     require(
-      managerPortParameters.anySupportAcquireBlockA,
+      managerPortParameters.supports[AcquireBlockA].nonEmpty,
       s"""No managers visible from this edge support AcquireBlock in A channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignA(
       opcode = TLOpcode.AcquireBlock,
@@ -200,9 +200,9 @@ class TLEdgeOut(
     mask:    UInt
   ): TLChannelA = {
     require(
-      managerPortParameters.anySupportAcquirePermA,
+      managerPortParameters.supports[AcquirePermA].nonEmpty,
       s"""No managers visible from this edge support AcquirePerm in A channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignA(
       opcode = TLOpcode.AcquirePerm,
@@ -224,9 +224,9 @@ class TLEdgeOut(
     address: UInt
   ): TLChannelC = {
     require(
-      managerPortParameters.anySupportProbeAckC,
+      managerPortParameters.supports[ProbeAckC].nonEmpty,
       s"""No managers visible from this edge support ProbeAck in C channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignC(
       opcode = TLOpcode.ProbeAck,
@@ -249,9 +249,9 @@ class TLEdgeOut(
     corrupt: Bool
   ): TLChannelC = {
     require(
-      managerPortParameters.anySupportProbeAckDataC,
+      managerPortParameters.supports[ProbeAckDataC].nonEmpty,
       s"""No managers visible from this edge support ProbeAckData in C channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignC(
       opcode = TLOpcode.ProbeAckData,
@@ -269,9 +269,9 @@ class TLEdgeOut(
     sink: UInt
   ): TLChannelE = {
     require(
-      managerPortParameters.anySupportGrantAckE,
+      managerPortParameters.supports[GrantAckE].nonEmpty,
       s"""No managers visible from this edge support GrantAck in E channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignE(
       sink = sink
@@ -286,9 +286,9 @@ class TLEdgeOut(
     address: UInt
   ): TLChannelC = {
     require(
-      managerPortParameters.anySupportProbeAckC,
+      managerPortParameters.supports[ProbeAckC].nonEmpty,
       s"""No managers visible from this edge support Release in C channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignC(
       opcode = TLOpcode.Release,
@@ -311,9 +311,9 @@ class TLEdgeOut(
     corrupt: Bool
   ): TLChannelC = {
     require(
-      managerPortParameters.anySupportReleaseDataC,
+      managerPortParameters.supports[ReleaseDataC].nonEmpty,
       s"""No managers visible from this edge support ReleaseData in C channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignC(
       opcode = TLOpcode.ReleaseData,
@@ -333,9 +333,9 @@ class TLEdgeOut(
     address: UInt
   ): TLChannelC = {
     require(
-      managerPortParameters.anySupportAccessAckC,
+      managerPortParameters.supports[AccessAckC].nonEmpty,
       s"""No managers visible from this edge support AccessAck in C channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignC(
       opcode = TLOpcode.AccessAck,
@@ -357,9 +357,9 @@ class TLEdgeOut(
     corrupt: Bool
   ): TLChannelC = {
     require(
-      managerPortParameters.anySupportAccessAckDataC,
+      managerPortParameters.supports[AccessAckDataC].nonEmpty,
       s"""No managers visible from this edge support AccessAckData in C channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignC(
       opcode = TLOpcode.AccessAckData,
@@ -379,9 +379,9 @@ class TLEdgeOut(
     address: UInt
   ): TLChannelC = {
     require(
-      managerPortParameters.anySupportHintAckC,
+      managerPortParameters.supports[HintAckC].nonEmpty,
       s"""No managers visible from this edge support HintAck in C channel,
-         |but one of these clients would try to request one: ${clientPortParameters.clients}""".stripMargin
+         |but one of these clients would try to request one: ${clientPortParameters.masters}""".stripMargin
     )
     assignC(
       opcode = TLOpcode.HintAck,

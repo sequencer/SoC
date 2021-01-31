@@ -46,13 +46,13 @@ object TLArbiter {
       // Arbitrate amongst the requests
       val readys = VecInit(policy(valids.size, Cat(valids.reverse), latch).asBools)
       // Which request wins arbitration?
-      val winner = VecInit((readys.zip(valids)).map { case (r, v) => r && v })
+      val winner = VecInit(readys.zip(valids).map { case (r, v) => r && v })
 
       // Confirm the policy works properly
       require(readys.size == valids.size)
       // Never two winners
       val prefixOR = winner.scanLeft(false.B)(_ || _).init
-      assert((prefixOR.zip(winner)).map { case (p, w) => !p || !w }.reduce { _ && _ })
+      assert(prefixOR.zip(winner).map { case (p, w) => !p || !w }.reduce { _ && _ })
       // If there was any request, there is a winner
       assert(!valids.reduce(_ || _) || winner.reduce(_ || _))
 
