@@ -103,6 +103,10 @@ class regmapper extends UtilityModule {
 object tilelink extends tilelink
 class tilelink extends UtilityModule {
   override def moduleDeps = super.moduleDeps ++ Seq(diplomacyUtility, crossing, dts, misc, verification, prci, regmapper)
+  object test extends Tests {
+    def ivyDeps = Agg(ivy"com.lihaoyi::utest:0.7.7")
+    def testFrameworks = Seq("utest.runner.Framework")
+  }
 }
 
 object uncore extends uncore 
