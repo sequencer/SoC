@@ -4,10 +4,10 @@ import chisel3._
 import chisel3.internal.sourceinfo.SourceInfo
 
 class TLEdgeIn(
-  clientPortParameters:  TLClientPortParameters,
-  managerPortParameters: TLManagerPortParameters,
-  sourceInfo:            SourceInfo)
-    extends TLEdge(clientPortParameters, managerPortParameters, sourceInfo) {
+  masterPortParameters: TLMasterPortParameters,
+  slavePortParameters:  TLSlavePortParameters,
+  sourceInfo:           SourceInfo)
+    extends TLEdge(masterPortParameters, slavePortParameters, sourceInfo) {
 
   /** Spec 7.2.4 */
   def AccessAckD(
@@ -16,9 +16,9 @@ class TLEdgeIn(
     denied: Bool
   ): TLChannelD = {
     require(
-      clientPortParameters.anySupportAccessAckD,
+      masterPortParameters.supports[AccessAckD].nonEmpty,
       s"""No clients visible from this edge support AccessAck in D channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignD(
       opcode = TLOpcode.AccessAck,
@@ -41,9 +41,9 @@ class TLEdgeIn(
     corrupt: Bool
   ): TLChannelD = {
     require(
-      clientPortParameters.anySupportAccessAckDataD,
+      masterPortParameters.supports[AccessAckD].nonEmpty,
       s"""No clients visible from this edge support AccessAckData in D channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignD(
       opcode = TLOpcode.AccessAckData,
@@ -65,9 +65,9 @@ class TLEdgeIn(
     denied: UInt
   ): TLChannelD = {
     require(
-      clientPortParameters.anySupportHintAckD,
+      masterPortParameters.supports[HintAckD].nonEmpty,
       s"""No clients visible from this edge support HintAck in D channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignD(
       opcode = TLOpcode.HintAck,
@@ -91,9 +91,9 @@ class TLEdgeIn(
     mask:    UInt
   ): TLChannelB = {
     require(
-      clientPortParameters.anySupportProbeBlockB,
+      masterPortParameters.supports[ProbeBlockB].nonEmpty,
       s"""No clients visible from this edge support ProbeBlock in B channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignB(
       opcode = TLOpcode.ProbeBlock,
@@ -116,9 +116,9 @@ class TLEdgeIn(
     mask:    UInt
   ): TLChannelB = {
     require(
-      clientPortParameters.anySupportProbePermB,
+      masterPortParameters.supports[ProbePermB].nonEmpty,
       s"""No clients visible from this edge support ProbePerm in B channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignB(
       opcode = TLOpcode.ProbePerm,
@@ -141,9 +141,9 @@ class TLEdgeIn(
     denied: Bool
   ): TLChannelD = {
     require(
-      clientPortParameters.anySupportGrantD,
+      masterPortParameters.supports[GrantD].nonEmpty,
       s"""No clients visible from this edge support Grant in D channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignD(
       opcode = TLOpcode.Grant,
@@ -168,9 +168,9 @@ class TLEdgeIn(
     corrupt: Bool
   ): TLChannelD = {
     require(
-      clientPortParameters.anySupportGrantD,
+      masterPortParameters.supports[GrantD].nonEmpty,
       s"""No clients visible from this edge support GrantData in D channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignD(
       opcode = TLOpcode.GrantData,
@@ -190,9 +190,9 @@ class TLEdgeIn(
     source: UInt
   ): TLChannelD = {
     require(
-      clientPortParameters.anySupportReleaseAckD,
+      masterPortParameters.supports[ReleaseAckD].nonEmpty,
       s"""No clients visible from this edge support ReleaseAck in D channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignD(
       opcode = TLOpcode.ReleaseAck,
@@ -214,9 +214,9 @@ class TLEdgeIn(
     mask:    UInt
   ): TLChannelB = {
     require(
-      clientPortParameters.anySupportGetB,
+      masterPortParameters.supports[GetB].nonEmpty,
       s"""No clients visible from this edge support Get in B channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignB(
       opcode = TLOpcode.Get,
@@ -240,9 +240,9 @@ class TLEdgeIn(
     corrupt: Bool
   ): TLChannelB = {
     require(
-      clientPortParameters.anySupportPutFullDataB,
+      masterPortParameters.supports[PutFullDataB].nonEmpty,
       s"""No clients visible from this edge support PutFullData in B channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignB(
       opcode = TLOpcode.PutFullData,
@@ -266,9 +266,9 @@ class TLEdgeIn(
     corrupt: Bool
   ): TLChannelB = {
     require(
-      clientPortParameters.anySupportPutPartialDataB,
+      masterPortParameters.supports[PutPartialDataB].nonEmpty,
       s"""No clients visible from this edge support PutPartialData in B channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignB(
       opcode = TLOpcode.PutPartialData,
@@ -293,9 +293,9 @@ class TLEdgeIn(
     corrupt: Bool
   ): TLChannelB = {
     require(
-      clientPortParameters.anySupportArithmeticDataB,
+      masterPortParameters.supports[ArithmeticDataB].nonEmpty,
       s"""No clients visible from this edge support ArithmeticData in B channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignB(
       opcode = TLOpcode.ArithmeticData,
@@ -320,9 +320,9 @@ class TLEdgeIn(
     corrupt: Bool
   ): TLChannelB = {
     require(
-      clientPortParameters.anySupportLogicalDataB,
+      masterPortParameters.supports[LogicalDataB].nonEmpty,
       s"""No clients visible from this edge support LogicalData in B channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignB(
       opcode = TLOpcode.LogicalData,
@@ -347,9 +347,9 @@ class TLEdgeIn(
     corrupt: Bool
   ): TLChannelB = {
     require(
-      clientPortParameters.anySupportIntentB,
+      masterPortParameters.supports[IntentB].nonEmpty,
       s"""No clients visible from this edge support Intent in B channel,
-         |but one of these managers would try to request one: ${managerPortParameters.managers}""".stripMargin
+         |but one of these managers would try to request one: ${slavePortParameters.slaves}""".stripMargin
     )
     assignB(
       opcode = TLOpcode.Intent,

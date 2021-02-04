@@ -5,138 +5,100 @@ import chisel3.experimental.ChiselEnum
 import chisel3.internal.sourceinfo.SourceInfo
 import chisel3.util.log2Ceil
 import diplomacy.FormatEdge
+import org.chipsalliance.utils.addressing.MaskGen
 import org.chipsalliance.utils.misc.UIntToOH1
 
-import math.max
+import scala.math.max
+import scala.reflect.{classTag, ClassTag}
+
 case class TLEdge(
-  clientPortParameters:  TLClientPortParameters,
-  managerPortParameters: TLManagerPortParameters,
-  sourceInfo:            SourceInfo)
+  masterPortParameters: TLMasterPortParameters,
+  slavePortParameters:  TLSlavePortParameters,
+  sourceInfo:           SourceInfo)
     extends FormatEdge {
+  val bundleParameters: TLBundleParameters = TLBundleParameters(masterPortParameters, slavePortParameters)
+
   override def formatEdge: String = "TODO"
 
-  def opcode(channel:  TLOpcodeChannel):  UInt = channel.opcode
-  def param(channel:   TLOpcodeChannel):  UInt = channel.param
-  def data(channel:    TLDataChannel):    UInt = channel.data
-  def size(channel:    TLDataChannel):    UInt = channel.size
-  def corrupt(channel: TLDataChannel):    Bool = channel.corrupt
-  def mask(channel:    TLMaskChannel):    UInt = channel.mask
-  def address(channel: TLAddressChannel): UInt = channel.address
-  def source(channel:  TLSourceChannel):  UInt = channel.source
-
-  def maxTransferSize(channel: TLChannel): Int = channel match {
-    case _: TLChannelA => max(clientPortParameters.maxTransferSizeA, managerPortParameters.maxTransferSizeA)
-    case _: TLChannelB => max(clientPortParameters.maxTransferSizeB, managerPortParameters.maxTransferSizeB)
-    case _: TLChannelC => max(clientPortParameters.maxTransferSizeC, managerPortParameters.maxTransferSizeC)
-    case _: TLChannelD => max(clientPortParameters.maxTransferSizeD, managerPortParameters.maxTransferSizeD)
-    case _: TLChannelE => 0
-  }
-
-  def maxLogTransferSize(channel: TLChannel): Int = log2Ceil(maxTransferSize(channel))
-
-  def beatBytes(channel: TLChannel): Int = channel match {
-    case _: TLChannelA => managerPortParameters.channelBeatBytes.a
-    case _: TLChannelB => managerPortParameters.channelBeatBytes.b
-    case _: TLChannelC => managerPortParameters.channelBeatBytes.c
-    case _: TLChannelD => managerPortParameters.channelBeatBytes.d
-    case _: TLChannelE => 0
-  }
-
-  /** @todo doc this. */
-  def numBeats1(x: TLChannel): UInt = {
-    x match {
-      case _:       TLChannelE => 0.U
-      case channel: TLDataChannel => {
-        if (maxLogTransferSize(x) == 0)
+  /** based on the [[beatBytes]] and [[TLDataChannel.size]], count the number of beat represent in OneHot encode.
+    *
+    * @note
+    * It will generate a OneHot decode circuit and a Mux for [[TLDataChannel]]
+    *
+    * @todo require the channel is derived from this [[TLEdge]] to forbid not matching problem.
+    */
+  def numBeats1[Channel <: TLChannel: ClassTag](channel: Channel): UInt = {
+    // Channel is not [[TLDataChannel]]: E
+    channel match {
+      case c: TLDataChannel =>
+        if (maxTransferSize[Channel] == 0)
           0.U
         else {
-          val decode = (UIntToOH1(size(channel), maxLogTransferSize(x)) >> log2Ceil(beatBytes(channel))).asUInt()
+          val decode: UInt = (
+            UIntToOH1(
+              c.size,
+              maxTransferSizeLog2[TLDataChannel]
+            ) >> log2Ceil(beatBytes[Channel])
+          ).asUInt()
           Mux(hasData(channel), decode, 0.U)
         }
-      }
+      case _ => 0.U
     }
+  }
+
+  def maxTransferSizeLog2[Channel <: TLChannel: ClassTag]: Int =
+    log2Ceil(maxTransferSize[Channel])
+
+  def maxTransferSize[Channel <: TLChannel: ClassTag]: Int =
+    max(masterPortParameters.maxTransferSize[Channel], slavePortParameters.maxTransferSize[Channel])
+
+  def beatBytes[Channel <: TLChannel: ClassTag]: Int = {
+    val runtimeClass: Class[_] = classTag[Channel].runtimeClass
+    if (classOf[TLChannelA].isAssignableFrom(runtimeClass))
+      slavePortParameters.channelBeatBytes.a
+    else if (classOf[TLChannelB].isAssignableFrom(runtimeClass))
+      slavePortParameters.channelBeatBytes.b
+    else if (classOf[TLChannelC].isAssignableFrom(runtimeClass))
+      slavePortParameters.channelBeatBytes.c
+    else if (classOf[TLChannelD].isAssignableFrom(runtimeClass))
+      slavePortParameters.channelBeatBytes.d
+    else if (classOf[TLChannelE].isAssignableFrom(runtimeClass))
+      0
+    else throw new RuntimeException(s"Cannot detect class type for $runtimeClass.")
   }
 
   def hasData(x: TLChannel): Bool = {
-    val opdata = x match {
-      //    opcode === TLMessages.PutFullData    ||
-      //    opcode === TLMessages.PutPartialData ||
-      //    opcode === TLMessages.ArithmeticData ||
-      //    opcode === TLMessages.LogicalData
-      case a: TLChannelA => !a.opcode(2)
-      //    opcode === TLMessages.PutFullData    ||
-      //    opcode === TLMessages.PutPartialData ||
-      //    opcode === TLMessages.ArithmeticData ||
-      //    opcode === TLMessages.LogicalData
-      case b: TLChannelB => !b.opcode(2)
-      //    opcode === TLMessages.AccessAckData ||
-      //    opcode === TLMessages.ProbeAckData  ||
-      //    opcode === TLMessages.ReleaseData
-      case c: TLChannelC => c.opcode(0)
-      //    opcode === TLMessages.AccessAckData ||
-      //    opcode === TLMessages.GrantData
-      case d: TLChannelD => d.opcode(0)
-      case e: TLChannelE => false.B
-    }
-    staticHasData(x).map(_.B).getOrElse(opdata)
+    staticHasData(x)
+      .map((_: Boolean).B)
+      .getOrElse(x match {
+        // ABCD
+        case channel: TLOpcodeChannel => channel.hasData
+        // E
+        case _ => false.B
+      })
   }
 
-  def staticHasData(bundle: TLChannel): Option[Boolean] = {
+  /** Statically optimize the case where hasData is a constant base on parameters. */
+  private def staticHasData(bundle: TLChannel): Option[Boolean] = {
     bundle match {
-      case _: TLChannelA =>
-        // Do there exist A messages with Data?
-        val aDataYes = managerPortParameters.anySupportArithmeticDataA ||
-          managerPortParameters.anySupportLogicalDataA ||
-          managerPortParameters.anySupportPutFullDataA ||
-          managerPortParameters.anySupportPutPartialDataA
-        // Do there exist A messages without Data?
-        val aDataNo = managerPortParameters.anySupportAcquiredB ||
-          managerPortParameters.anySupportGetA ||
-          managerPortParameters.anySupportIntentA
-        // Statically optimize the case where hasData is a constant
-        if (!aDataYes) Some(false) else if (!aDataNo) Some(true) else None
-      case _: TLChannelB =>
-        // Do there exist B messages with Data?
-        val bDataYes = clientPortParameters.anySupportArithmeticDataB ||
-          clientPortParameters.anySupportLogicalDataB ||
-          clientPortParameters.anySupportPutFullDataB ||
-          clientPortParameters.anySupportPutPartialDataB
-        // Do there exist B messages without Data?
-        val bDataNo = clientPortParameters.anySupportProbe ||
-          clientPortParameters.anySupportGetB ||
-          clientPortParameters.anySupportIntentB
-        // Statically optimize the case where hasData is a constant
-        if (!bDataYes) Some(false) else if (!bDataNo) Some(true) else None
-      case _: TLChannelC =>
-        // Do there exist C messages with Data?
-        val cDataYes =
-          clientPortParameters.anySupportGetB ||
-            clientPortParameters.anySupportArithmeticDataB ||
-            clientPortParameters.anySupportLogicalDataB ||
-            clientPortParameters.anySupportProbe
-        // Do there exist C messages without Data?
-        val cDataNo =
-          clientPortParameters.anySupportPutFullDataB ||
-            clientPortParameters.anySupportPutPartialDataB ||
-            clientPortParameters.anySupportIntentB ||
-            clientPortParameters.anySupportProbe
-        if (!cDataYes) Some(false) else if (!cDataNo) Some(true) else None
-      case _: TLChannelD =>
-        // Do there exist D messages with Data?
-        val dDataYes =
-          managerPortParameters.anySupportGetA ||
-            managerPortParameters.anySupportArithmeticDataA ||
-            managerPortParameters.anySupportLogicalDataA ||
-            managerPortParameters.anySupportAcquiredB
-        // Do there exist D messages without Data?
-        val dDataNo =
-          managerPortParameters.anySupportPutFullDataA ||
-            managerPortParameters.anySupportPutPartialDataA ||
-            managerPortParameters.anySupportIntentA ||
-            managerPortParameters.anySupportAcquiredT
-        if (!dDataYes) Some(false) else if (!dDataNo) Some(true) else None
-
-      case _: TLChannelE => Some(false)
+      case _: TLMasterToSlaveChannel =>
+        val hasDataMessages: Set[MasterToSlaveMessage] =
+          slavePortParameters
+            .supports[HasData]
+            .asInstanceOf[Set[MasterToSlaveMessage]]
+        val hasNoDataMessages: Set[MasterToSlaveMessage] =
+          slavePortParameters.supports
+            .intersect(hasDataMessages)
+        if (hasDataMessages.isEmpty) Some(false) else if (hasNoDataMessages.isEmpty) Some(true) else None
+      case _: TLSlaveToMasterChannel =>
+        val hasDataMessages: Set[SlaveToMasterMessage] =
+          masterPortParameters
+            .supports[HasData]
+            .asInstanceOf[Set[SlaveToMasterMessage]]
+        val hasNoDataMessages: Set[SlaveToMasterMessage] =
+          masterPortParameters.supports
+            .intersect(hasDataMessages)
+        if (hasDataMessages.isEmpty) Some(false) else if (hasNoDataMessages.isEmpty) Some(true) else None
     }
   }
 
@@ -151,7 +113,7 @@ case class TLEdge(
     data:    UInt,
     corrupt: Bool
   ): TLChannelA = {
-    val a = Wire(new TLChannelA(bundleParameters.a))
+    val a: TLChannelA = Wire(new TLChannelA(bundleParameters.a))
     a.opcode := opcode
     a.param := param
     a.size := size
@@ -174,7 +136,7 @@ case class TLEdge(
     data:    UInt,
     corrupt: Bool
   ): TLChannelB = {
-    val b = Wire(new TLChannelB(bundleParameters.b.get))
+    val b: TLChannelB = Wire(new TLChannelB(bundleParameters.b.get))
     b.opcode := opcode
     b.param := param
     b.size := size
@@ -196,7 +158,7 @@ case class TLEdge(
     data:    UInt,
     corrupt: Bool
   ): TLChannelC = {
-    val c = Wire(new TLChannelC(bundleParameters.c.get))
+    val c: TLChannelC = Wire(new TLChannelC(bundleParameters.c.get))
     c.opcode := opcode
     c.param := param
     c.size := size
@@ -218,7 +180,7 @@ case class TLEdge(
     data:    UInt,
     corrupt: Bool
   ): TLChannelD = {
-    val d = Wire(new TLChannelD(bundleParameters.d))
+    val d: TLChannelD = Wire(new TLChannelD(bundleParameters.d))
     d.opcode := opcode
     d.param := param
     d.size := size
@@ -234,12 +196,10 @@ case class TLEdge(
   protected def assignE(
     sink: UInt
   ): TLChannelE = {
-    val e = Wire(new TLChannelE(bundleParameters.e.get))
+    val e: TLChannelE = Wire(new TLChannelE(bundleParameters.e.get))
     e.sink := sink
     e
   }
-
-  val bundleParameters: TLBundleParameters = TLBundleParameters(clientPortParameters, managerPortParameters)
 }
 
 object TLOpcode {

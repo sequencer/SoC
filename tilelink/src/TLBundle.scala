@@ -1,107 +1,116 @@
 package tilelink
 
 import chisel3._
-import chisel3.util.{Decoupled, DecoupledIO}
-import org.chipsalliance.utils.addressing.MaskGen
+import chisel3.util.{log2Ceil, log2Up, Decoupled, DecoupledIO}
 
 import scala.collection.immutable.ListMap
+import scala.math.max
+
+case class TLBundleParameters(
+  a: TLChannelParameters = TLChannelParameters(),
+  b: Option[TLChannelParameters] = None,
+  c: Option[TLChannelParameters] = None,
+  d: TLChannelParameters = TLChannelParameters(),
+  e: Option[TLChannelParameters] = None) {
+  require(
+    (b.isDefined && c.isDefined && e.isDefined) || (b.isEmpty && c.isEmpty && e.isEmpty),
+    "only AD/ABCDE channels is allowed."
+  )
+
+  val isTLC: Boolean = b.isDefined && c.isDefined && e.isDefined
+
+  def union(that: TLBundleParameters): TLBundleParameters = {
+    TLBundleParameters(
+      TLChannelParameters.union(a, that.a),
+      TLChannelParameters.union(b, that.b),
+      TLChannelParameters.union(c, that.c),
+      TLChannelParameters.union(d, that.d),
+      TLChannelParameters.union(e, that.e)
+    )
+  }
+
+}
+
+object TLBundleParameters {
+  def apply(client: TLMasterPortParameters, manager: TLSlavePortParameters): TLBundleParameters =
+    if (
+      (client.supports[ProbeBlockB].nonEmpty || client.supports[ProbePermB].nonEmpty) &&
+      ((manager.supports[AcquireBlockA].nonEmpty || manager.supports[AcquirePermA].nonEmpty) ||
+      (manager.supports[ReleaseC].nonEmpty || manager.supports[ReleaseDataC].nonEmpty))
+    )
+      TLBundleParameters(
+        TLChannelParameters(
+          dataWidth = manager.channelBeatBytes.a * 8,
+          addressWidth = log2Up(manager.maxAddress + 1),
+          sourceWidth = log2Up(client.endSourceId),
+          sizeWidth = log2Up(log2Ceil(max(client.maxTransferSize[TLChannelA], manager.maxTransferSize[TLChannelA])) + 1)
+        ),
+        Some(
+          TLChannelParameters(
+            dataWidth = manager.channelBeatBytes.b * 8,
+            addressWidth = log2Up(manager.maxAddress + 1),
+            sourceWidth = log2Up(client.endSourceId),
+            sizeWidth =
+              log2Up(log2Ceil(max(client.maxTransferSize[TLChannelB], manager.maxTransferSize[TLChannelB])) + 1)
+          )
+        ),
+        Some(
+          TLChannelParameters(
+            dataWidth = manager.channelBeatBytes.c * 8,
+            sizeWidth =
+              log2Up(log2Ceil(max(client.maxTransferSize[TLChannelC], manager.maxTransferSize[TLChannelC])) + 1),
+            addressWidth = log2Up(manager.maxAddress + 1),
+            sourceWidth = log2Up(client.endSourceId),
+            sinkWidth = log2Up(manager.endSinkId)
+          )
+        ),
+        TLChannelParameters(
+          dataWidth = manager.channelBeatBytes.d * 8,
+          sizeWidth =
+            log2Up(log2Ceil(max(client.maxTransferSize[TLChannelD], manager.maxTransferSize[TLChannelD])) + 1),
+          sourceWidth = log2Up(client.endSourceId),
+          sinkWidth = log2Up(manager.endSinkId)
+        ),
+        Some(
+          TLChannelParameters(
+            sinkWidth = log2Up(manager.endSinkId)
+          )
+        )
+      )
+    else
+      TLBundleParameters(
+        TLChannelParameters(
+          dataWidth = manager.channelBeatBytes.a * 8,
+          sizeWidth =
+            log2Up(log2Ceil(max(client.maxTransferSize[TLChannelA], manager.maxTransferSize[TLChannelA])) + 1),
+          addressWidth = log2Up(manager.maxAddress + 1),
+          sourceWidth = log2Up(client.endSourceId)
+        ),
+        None,
+        None,
+        TLChannelParameters(
+          dataWidth = manager.channelBeatBytes.d * 8,
+          sizeWidth =
+            log2Up(log2Ceil(max(client.maxTransferSize[TLChannelD], manager.maxTransferSize[TLChannelD])) + 1),
+          sourceWidth = log2Up(client.endSourceId),
+          sinkWidth = log2Up(manager.endSinkId)
+        ),
+        None
+      )
+
+  def union(x: Seq[TLBundleParameters]): TLBundleParameters =
+    x.reduce((x: TLBundleParameters, y: TLBundleParameters) => x.union(y))
+}
 
 case class TLCNotInThisBundle(bundleParameters: TLBundleParameters)
     extends Exception(s"""cannot use TLC with parameter: ${bundleParameters.toString}""")
-
-/** TileLink Spec 1.8.1 Table 14
-  *
-  * Summary of TileLink routing fields
-  *
-  * | Channel | Destination | Sequence | Routed By | Provides  | For Use As |
-  * | :---:   | :---:       | :---:    | :---:     | :---:     | :---:      |
-  * | A       | slave       | request  | a_address | a_source  | d_source   |
-  * | B       | master      | request  | b_source  | b_address | c_address  |
-  * | C       | slave       | response | c_address | .         |            |
-  * | C       | slave       | request  | c_address | c_source  |            |
-  * | D       | master      | response | d_source  | .         | d_source   |
-  * | D       | master      | request  | d_source  | d_sink    | e_sink     |
-  * | E       | slave       | response | e_source  | .         |            |
-  */
-sealed trait TLChannel extends Bundle {
-  val channelParameters: TLChannelParameters
-}
-
-/** Apply to ABCD channel. */
-sealed trait TLOpcodeChannel { this: TLChannel =>
-  val opcode: UInt = UInt(3.W)
-  val param:  UInt = UInt(3.W)
-}
-sealed trait TLDataChannel { this: TLChannel =>
-  val data:    UInt = UInt(channelParameters.dataWidth.W)
-  val size:    UInt = UInt(channelParameters.sizeWidth.W)
-  val corrupt: Bool = Bool()
-}
-sealed trait TLMaskChannel { this: TLChannel with TLAddressChannel with TLDataChannel =>
-  val mask:    UInt = UInt(channelParameters.maskWidth.W)
-  def genMask: UInt = MaskGen(address, size, channelParameters.beatBytes)
-}
-
-/** only D channel can deny. */
-sealed trait TLDeniedChannel { this: TLChannel =>
-  val denied: Bool = Bool()
-}
-sealed trait TLAddressChannel { this: TLChannel with TLDataChannel =>
-  val address: UInt = UInt(channelParameters.addressWidth.W)
-}
-sealed trait TLSourceChannel { this: TLChannel with TLDataChannel =>
-  val source: UInt = UInt(channelParameters.sourceWidth.W)
-}
-sealed trait TLSinkChannel { this: TLChannel =>
-  val sink: UInt = UInt(channelParameters.sinkWidth.W)
-}
-final class TLChannelA(val channelParameters: TLChannelParameters)
-    extends TLChannel
-    with TLOpcodeChannel
-    // Request provides `a.source` for use as `d.source`
-    with TLSourceChannel
-    // Request routed by `a.address`
-    with TLAddressChannel
-    with TLMaskChannel
-    with TLDataChannel
-final class TLChannelB(val channelParameters: TLChannelParameters)
-    extends TLChannel
-    with TLOpcodeChannel
-    // Request routed by `b.source`
-    with TLSourceChannel
-    // Request provides `b.address` for use as `c.address`
-    with TLAddressChannel
-    with TLMaskChannel
-    with TLDataChannel
-final class TLChannelC(val channelParameters: TLChannelParameters)
-    extends TLChannel
-    with TLOpcodeChannel
-    // Request provides `c.source` for use as `d.source`
-    with TLSourceChannel
-    // Response routed by `c.address` provided by `a.address`
-    // Request routed by `c.address`
-    with TLAddressChannel
-    with TLDataChannel
-final class TLChannelD(val channelParameters: TLChannelParameters)
-    extends TLChannel
-    with TLOpcodeChannel
-    // Response routed by `d.source` provided by `a.source`
-    // Request routed by `d.source`
-    with TLSourceChannel
-    // Request provides `d.sink` for use as `e.sink`
-    with TLSinkChannel
-    with TLDataChannel
-    with TLDeniedChannel
-final class TLChannelE(val channelParameters: TLChannelParameters)
-    extends TLChannel
-    // Response routed by `e.sink`
-    with TLSinkChannel
 
 class TLDecoupledBundle(val bundleParameters: TLBundleParameters) extends Record {
   // TL-UL and TL-UH
   lazy val a: DecoupledIO[TLChannelA] = Decoupled(new TLChannelA(bundleParameters.a))
   lazy val d: DecoupledIO[TLChannelD] = Flipped(Decoupled(new TLChannelD(bundleParameters.d)))
-  // TL-C, lazy val will be instantiate at evaluating elements or user call them by mistake.
+
+  // TL-C, lazy val will be instantiate at evaluating [[elements]] or user call them by mistake.
   lazy val b: DecoupledIO[TLChannelB] =
     if (bundleParameters.isTLC) Flipped(Decoupled(new TLChannelB(bundleParameters.b.get)))
     else throw TLCNotInThisBundle(bundleParameters)
