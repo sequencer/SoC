@@ -17,11 +17,11 @@ object TLParametersSpec extends TestSuite {
       resources = Seq.empty,
       visibility = Seq(AddressSet(0x100, 0xff), AddressSet(0x300, 0xff)),
       supports = Set(
-        AccessAckD(mayDeny = true)
+        AccessAckD()
       ),
       emits = Set(
-        PutFullDataA(transferSizes = TransferSizes(2, 128), mayCorrupt = true),
-        PutPartialDataA(TransferSizes(2, 64), mayCorrupt = true)
+        PutFullDataA(),
+        PutPartialDataA()
       )
     )
     val tlSlaveParameters: TLSlaveParameters = TLSlaveParameters(
@@ -33,15 +33,15 @@ object TLParametersSpec extends TestSuite {
       executable = true,
       fifoDomain = None,
       supports = Set(
-        PutFullDataA(transferSizes = TransferSizes(2, 128), mayCorrupt = true),
-        PutPartialDataA(TransferSizes(2, 64), mayCorrupt = true)
+        PutFullDataA(),
+        PutPartialDataA()
       ),
       emits = Set(
-        AccessAckD(mayDeny = true)
+        AccessAckD()
       )
     )
     test("support emit query with type parameter should work") {
-      assert(tlMasterParameters.supports[AccessAckD].head == AccessAckD(mayDeny = true))
+      assert(tlMasterParameters.supports[AccessAckD].head == AccessAckD())
       assert(tlMasterParameters.emits[PutFullDataA].size == 1)
       assert(tlMasterParameters.emits[HasTransferSizes].size == 2)
       assert(tlSlaveParameters.supports[ChannelAMessage].size == 2)
