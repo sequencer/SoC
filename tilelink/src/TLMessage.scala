@@ -19,7 +19,7 @@ object TLMessage {
 trait TLMessage {
 
   /** can this support that message? */
-  def support(emit: TLMessage): Boolean = if (emit.isInstanceOf[this.type]) true else false
+  def support(emit: TLMessage): Boolean
 
   /** union two same type [[TLMessage]].
     *
@@ -47,7 +47,7 @@ trait ChannelDMessage extends SlaveToMasterMessage
 trait HasTransferSizes extends TLMessage {
   val transferSizes: TransferSizes
 
-  override def support(emit: TLMessage): Boolean = super.support(emit) &&
+  override def support(emit: TLMessage): Boolean =
     transferSizes.contains(emit.asInstanceOf[this.type].transferSizes)
 }
 
@@ -55,14 +55,14 @@ trait HasData extends TLMessage {
   this: HasTransferSizes =>
   val mayCorrupt: Boolean
 
-  override def support(emit: TLMessage): Boolean = super.support(emit) &&
-    (!mayCorrupt && emit.asInstanceOf[this.type].mayCorrupt)
+  override def support(emit: TLMessage): Boolean =
+    !(!mayCorrupt && emit.asInstanceOf[this.type].mayCorrupt)
 }
 
 trait HasDeny extends TLMessage {
   val mayDeny: Boolean
 
-  override def support(emit: TLMessage): Boolean = super.support(emit) &&
+  override def support(emit: TLMessage): Boolean =
     !(!mayDeny && emit.asInstanceOf[this.type].mayDeny)
 }
 
@@ -75,12 +75,12 @@ trait IsArithmetic extends IsAtomic {
   val MAXU: Boolean
   val ADD:  Boolean
 
-  override def support(emit: TLMessage): Boolean = super.support(emit) &&
-    (!MIN && emit.asInstanceOf[this.type].MIN) ||
-    (!MAX && emit.asInstanceOf[this.type].MAX) ||
-    (!MINU && emit.asInstanceOf[this.type].MINU) ||
-    (!MAXU && emit.asInstanceOf[this.type].MAXU) ||
-    (!ADD && emit.asInstanceOf[this.type].ADD)
+  override def support(emit: TLMessage): Boolean =
+    !((!MIN && emit.asInstanceOf[this.type].MIN) ||
+      (!MAX && emit.asInstanceOf[this.type].MAX) ||
+      (!MINU && emit.asInstanceOf[this.type].MINU) ||
+      (!MAXU && emit.asInstanceOf[this.type].MAXU) ||
+      (!ADD && emit.asInstanceOf[this.type].ADD))
 }
 
 trait IsLogical extends IsAtomic {
@@ -88,19 +88,19 @@ trait IsLogical extends IsAtomic {
   val OR:  Boolean
   val AND: Boolean
 
-  override def support(emit: TLMessage): Boolean = super.support(emit) &&
-    (!XOR && emit.asInstanceOf[this.type].XOR) ||
-    (!OR && emit.asInstanceOf[this.type].OR) ||
-    (!AND && emit.asInstanceOf[this.type].AND)
+  override def support(emit: TLMessage): Boolean =
+    !((!XOR && emit.asInstanceOf[this.type].XOR) ||
+      (!OR && emit.asInstanceOf[this.type].OR) ||
+      (!AND && emit.asInstanceOf[this.type].AND))
 }
 
 trait IsPrefetch extends TLMessage {
   val PrefetchRead:  Boolean
   val PrefetchWrite: Boolean
 
-  override def support(emit: TLMessage): Boolean = super.support(emit) &&
-    (!PrefetchRead && emit.asInstanceOf[this.type].PrefetchRead) ||
-    (!PrefetchWrite && emit.asInstanceOf[this.type].PrefetchWrite)
+  override def support(emit: TLMessage): Boolean =
+    !((!PrefetchRead && emit.asInstanceOf[this.type].PrefetchRead) ||
+      (!PrefetchWrite && emit.asInstanceOf[this.type].PrefetchWrite))
 }
 
 trait HasPermissionTransfer extends TLMessage
@@ -113,13 +113,13 @@ trait HasPruneOrReport extends HasPermissionTransfer {
   val BtoB: Boolean
   val NtoN: Boolean
 
-  override def support(emit: TLMessage): Boolean = super.support(emit) &&
-    (!TtoB && emit.asInstanceOf[this.type].TtoB) ||
-    (!TtoN && emit.asInstanceOf[this.type].TtoN) ||
-    (!BtoN && emit.asInstanceOf[this.type].BtoN) ||
-    (!TtoT && emit.asInstanceOf[this.type].TtoT) ||
-    (!BtoB && emit.asInstanceOf[this.type].BtoB) ||
-    (!NtoN && emit.asInstanceOf[this.type].NtoN)
+  override def support(emit: TLMessage): Boolean =
+    !((!TtoB && emit.asInstanceOf[this.type].TtoB) ||
+      (!TtoN && emit.asInstanceOf[this.type].TtoN) ||
+      (!BtoN && emit.asInstanceOf[this.type].BtoN) ||
+      (!TtoT && emit.asInstanceOf[this.type].TtoT) ||
+      (!BtoB && emit.asInstanceOf[this.type].BtoB) ||
+      (!NtoN && emit.asInstanceOf[this.type].NtoN))
 }
 
 trait HasCap extends HasPermissionTransfer {
@@ -127,10 +127,10 @@ trait HasCap extends HasPermissionTransfer {
   val toB: Boolean
   val toT: Boolean
 
-  override def support(emit: TLMessage): Boolean = super.support(emit) &&
-    (!toN && emit.asInstanceOf[this.type].toN) ||
-    (!toB && emit.asInstanceOf[this.type].toB) ||
-    (!toT && emit.asInstanceOf[this.type].toT)
+  override def support(emit: TLMessage): Boolean =
+    !((!toN && emit.asInstanceOf[this.type].toN) ||
+      (!toB && emit.asInstanceOf[this.type].toB) ||
+      (!toT && emit.asInstanceOf[this.type].toT))
 }
 
 trait HasGrow extends HasPermissionTransfer {
@@ -138,17 +138,18 @@ trait HasGrow extends HasPermissionTransfer {
   val NtoT: Boolean
   val BtoT: Boolean
 
-  override def support(emit: TLMessage): Boolean = super.support(emit) &&
-    (!NtoB && emit.asInstanceOf[this.type].NtoB) ||
-    (!NtoT && emit.asInstanceOf[this.type].NtoT) ||
-    (!BtoT && emit.asInstanceOf[this.type].BtoT)
+  /** @todo is this support really good? a master not support [[NtoB]] [[BtoT]] can always grantT to slave. */
+  override def support(emit: TLMessage): Boolean =
+    !((!NtoB && emit.asInstanceOf[this.type].NtoB) ||
+      (!NtoT && emit.asInstanceOf[this.type].NtoT) ||
+      (!BtoT && emit.asInstanceOf[this.type].BtoT))
 }
 
 // Get/Atomic
 
 /** ----> [[AccessAckDataD]] */
 final case class GetA(
-  transferSizes: TransferSizes)
+  transferSizes: TransferSizes = TransferSizes(0, 4096))
     extends ChannelAMessage
     with HasTransferSizes {
   override def union[Message <: TLMessage](that: Message) = that match {
@@ -158,17 +159,19 @@ final case class GetA(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[GetA] &&
+    super[HasTransferSizes].support(emit)
 }
 
 /** ----> [[AccessAckDataD]] */
 final case class ArithmeticDataA(
-  transferSizes: TransferSizes,
-  MIN:           Boolean,
-  MAX:           Boolean,
-  MINU:          Boolean,
-  MAXU:          Boolean,
-  ADD:           Boolean,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  MIN:           Boolean = true,
+  MAX:           Boolean = true,
+  MINU:          Boolean = true,
+  MAXU:          Boolean = true,
+  ADD:           Boolean = true,
+  mayCorrupt:    Boolean = true)
     extends ChannelAMessage
     with HasTransferSizes
     with HasData
@@ -186,15 +189,19 @@ final case class ArithmeticDataA(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[ArithmeticDataA] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit) &&
+    super[IsArithmetic].support(emit)
 }
 
 /** ----> [[AccessAckDataD]] */
 final case class LogicalDataA(
-  transferSizes: TransferSizes,
-  XOR:           Boolean,
-  OR:            Boolean,
-  AND:           Boolean,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  XOR:           Boolean = true,
+  OR:            Boolean = true,
+  AND:           Boolean = true,
+  mayCorrupt:    Boolean = true)
     extends ChannelAMessage
     with HasTransferSizes
     with HasData
@@ -210,13 +217,17 @@ final case class LogicalDataA(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[LogicalDataA] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit) &&
+    super[IsLogical].support(emit)
 }
 
 /** <---- [[GetA]], [[ArithmeticDataA]], [[LogicalDataA]] */
 final case class AccessAckDataD(
-  transferSizes: TransferSizes,
-  mayDeny:       Boolean,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  mayDeny:       Boolean = true,
+  mayCorrupt:    Boolean = true)
     extends ChannelDMessage
     with HasTransferSizes
     with HasData
@@ -230,14 +241,18 @@ final case class AccessAckDataD(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[AccessAckDataD] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit) &&
+    super[HasDeny].support(emit)
 }
 
 // Put
 
 /** ----> [[AccessAckD]] */
 final case class PutFullDataA(
-  transferSizes: TransferSizes,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  mayCorrupt:    Boolean = true)
     extends ChannelAMessage
     with HasTransferSizes
     with HasData {
@@ -249,12 +264,15 @@ final case class PutFullDataA(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[PutFullDataA] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit)
 }
 
 /** ----> [[AccessAckD]] */
 final case class PutPartialDataA(
-  transferSizes: TransferSizes,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  mayCorrupt:    Boolean = true)
     extends ChannelAMessage
     with HasTransferSizes
     with HasData {
@@ -266,11 +284,15 @@ final case class PutPartialDataA(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[PutPartialDataA] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit)
 }
 
 /** <---- [[PutFullDataA]], [[PutPartialDataA]] */
 final case class AccessAckD(
-  mayDeny: Boolean)
+  mayDeny: Boolean = true)
     extends ChannelDMessage
     with HasDeny {
   override def union[Message <: TLMessage](that: Message) = that match {
@@ -280,14 +302,16 @@ final case class AccessAckD(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[AccessAckD] &&
+    super[HasDeny].support(emit)
 }
 
 // Intent
 /** ----> [[HintAckD]] */
 final case class IntentA(
-  transferSizes: TransferSizes,
-  PrefetchRead:  Boolean,
-  PrefetchWrite: Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  PrefetchRead:  Boolean = true,
+  PrefetchWrite: Boolean = true)
     extends ChannelAMessage
     with HasTransferSizes
     with IsPrefetch {
@@ -300,11 +324,14 @@ final case class IntentA(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[IntentA] &&
+    super[HasTransferSizes].support(emit) &&
+    super[IsPrefetch].support(emit)
 }
 
 /** <---- [[IntentA]] */
 final case class HintAckD(
-  mayDeny: Boolean)
+  mayDeny: Boolean = true)
     extends ChannelDMessage
     with HasDeny {
   override def union[Message <: TLMessage](that: Message) = that match {
@@ -314,16 +341,18 @@ final case class HintAckD(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[HintAckD] &&
+    super[HasDeny].support(emit)
 }
 
 // Acquire
 
 /** ----> [[GrantD]], [[GrantDataD]] */
 final case class AcquireBlockA(
-  transferSizes: TransferSizes,
-  NtoB:          Boolean,
-  NtoT:          Boolean,
-  BtoT:          Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  NtoB:          Boolean = true,
+  NtoT:          Boolean = true,
+  BtoT:          Boolean = true)
     extends ChannelAMessage
     with HasTransferSizes
     with HasGrow {
@@ -337,14 +366,17 @@ final case class AcquireBlockA(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[AcquireBlockA] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasGrow].support(emit)
 }
 
 /** ----> [[GrantD]] */
 final case class AcquirePermA(
-  transferSizes: TransferSizes,
-  NtoB:          Boolean,
-  NtoT:          Boolean,
-  BtoT:          Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  NtoB:          Boolean = true,
+  NtoT:          Boolean = true,
+  BtoT:          Boolean = true)
     extends ChannelAMessage
     with HasTransferSizes
     with HasGrow {
@@ -358,17 +390,20 @@ final case class AcquirePermA(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[AcquirePermA] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasGrow].support(emit)
 }
 
 /** <---- [[AcquireBlockA]], [[AcquirePermA]]
   * ----> [[GrantAckE]]
   */
 final case class GrantD(
-  transferSizes: TransferSizes,
-  toT:           Boolean,
-  toB:           Boolean,
-  toN:           Boolean,
-  mayDeny:       Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  toT:           Boolean = true,
+  toB:           Boolean = true,
+  toN:           Boolean = true,
+  mayDeny:       Boolean = true)
     extends ChannelDMessage
     with HasTransferSizes
     with HasCap
@@ -384,18 +419,22 @@ final case class GrantD(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[GrantD] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasCap].support(emit) &&
+    super[HasDeny].support(emit)
 }
 
 /** <---- [[AcquireBlockA]]
   * ----> [[GrantAckE]]
   */
 final case class GrantDataD(
-  transferSizes: TransferSizes,
-  toT:           Boolean,
-  toB:           Boolean,
-  toN:           Boolean,
-  mayDeny:       Boolean,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  toT:           Boolean = true,
+  toB:           Boolean = true,
+  toN:           Boolean = true,
+  mayDeny:       Boolean = true,
+  mayCorrupt:    Boolean = true)
     extends ChannelDMessage
     with HasTransferSizes
     with HasData
@@ -412,6 +451,11 @@ final case class GrantDataD(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[GrantDataD] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit) &&
+    super[HasDeny].support(emit) &&
+    super[HasCap].support(emit)
 }
 
 /** <---- [[GrantD]] */
@@ -420,16 +464,17 @@ final case class GrantAckE() extends ChannelEMessage {
     case _: GrantAckE => this
     case _ => super.union(that)
   }
+  def support(emit: TLMessage): Boolean = emit.isInstanceOf[GrantAckE]
 }
 
 // Probe
 
 /** ----> [[ProbeAckC]], [[ProbeAckDataC]] */
 final case class ProbeBlockB(
-  transferSizes: TransferSizes,
-  toN:           Boolean,
-  toB:           Boolean,
-  toT:           Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  toN:           Boolean = true,
+  toB:           Boolean = true,
+  toT:           Boolean = true)
     extends ChannelBMessage
     with HasTransferSizes
     with HasCap {
@@ -443,14 +488,17 @@ final case class ProbeBlockB(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[ProbeBlockB] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasCap].support(emit)
 }
 
 /** ----> [[ProbeAckC]] */
 final case class ProbePermB(
-  transferSizes: TransferSizes,
-  toN:           Boolean,
-  toB:           Boolean,
-  toT:           Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  toN:           Boolean = true,
+  toB:           Boolean = true,
+  toT:           Boolean = true)
     extends ChannelBMessage
     with HasTransferSizes
     with HasCap {
@@ -464,17 +512,20 @@ final case class ProbePermB(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[ProbePermB] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasCap].support(emit)
 }
 
 /** <---- [[ProbeBlockB]], [[ProbePermB]] */
 final case class ProbeAckC(
-  transferSizes: TransferSizes,
-  TtoB:          Boolean,
-  TtoN:          Boolean,
-  BtoN:          Boolean,
-  TtoT:          Boolean,
-  BtoB:          Boolean,
-  NtoN:          Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  TtoB:          Boolean = true,
+  TtoN:          Boolean = true,
+  BtoN:          Boolean = true,
+  TtoT:          Boolean = true,
+  BtoB:          Boolean = true,
+  NtoN:          Boolean = true)
     extends ChannelCMessage
     with HasTransferSizes
     with HasPruneOrReport {
@@ -491,18 +542,21 @@ final case class ProbeAckC(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[ProbeAckC] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasPruneOrReport].support(emit)
 }
 
 /** <---- [[ProbeBlockB]] */
 final case class ProbeAckDataC(
-  transferSizes: TransferSizes,
-  TtoB:          Boolean,
-  TtoN:          Boolean,
-  BtoN:          Boolean,
-  TtoT:          Boolean,
-  BtoB:          Boolean,
-  NtoN:          Boolean,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  TtoB:          Boolean = true,
+  TtoN:          Boolean = true,
+  BtoN:          Boolean = true,
+  TtoT:          Boolean = true,
+  BtoB:          Boolean = true,
+  NtoN:          Boolean = true,
+  mayCorrupt:    Boolean = true)
     extends ChannelCMessage
     with HasTransferSizes
     with HasData
@@ -520,19 +574,23 @@ final case class ProbeAckDataC(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[ProbeAckDataC] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit) &&
+    super[HasPruneOrReport].support(emit)
 }
 
 // Release
 
 /** ----> [[ReleaseAckD]] */
 final case class ReleaseC(
-  transferSizes: TransferSizes,
-  TtoB:          Boolean,
-  TtoN:          Boolean,
-  BtoN:          Boolean,
-  TtoT:          Boolean,
-  BtoB:          Boolean,
-  NtoN:          Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  TtoB:          Boolean = true,
+  TtoN:          Boolean = true,
+  BtoN:          Boolean = true,
+  TtoT:          Boolean = true,
+  BtoB:          Boolean = true,
+  NtoN:          Boolean = true)
     extends ChannelCMessage
     with HasTransferSizes
     with HasPruneOrReport {
@@ -549,18 +607,21 @@ final case class ReleaseC(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[ReleaseC] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasPruneOrReport].support(emit)
 }
 
 /** ----> [[ReleaseAckD]] */
 final case class ReleaseDataC(
-  transferSizes: TransferSizes,
-  TtoB:          Boolean,
-  TtoN:          Boolean,
-  BtoN:          Boolean,
-  TtoT:          Boolean,
-  BtoB:          Boolean,
-  NtoN:          Boolean,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  TtoB:          Boolean = true,
+  TtoN:          Boolean = true,
+  BtoN:          Boolean = true,
+  TtoT:          Boolean = true,
+  BtoB:          Boolean = true,
+  NtoN:          Boolean = true,
+  mayCorrupt:    Boolean = true)
     extends ChannelCMessage
     with HasTransferSizes
     with HasData
@@ -579,11 +640,15 @@ final case class ReleaseDataC(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[ReleaseDataC] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit) &&
+    super[HasPruneOrReport].support(emit)
 }
 
 /** <---- [[ReleaseC]], [[ReleaseDataC]] */
 final case class ReleaseAckD(
-  transferSizes: TransferSizes)
+  transferSizes: TransferSizes = TransferSizes(0, 4096))
     extends ChannelDMessage
     with HasTransferSizes {
   override def union[Message <: TLMessage](that: Message) = that match {
@@ -593,13 +658,15 @@ final case class ReleaseAckD(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[ReleaseAckD] &&
+    super[HasTransferSizes].support(emit)
 }
 
 // Get/Atomic in TL-C
 
 /** ----> [[AccessAckDataC]] */
 final case class GetB(
-  transferSizes: TransferSizes)
+  transferSizes: TransferSizes = TransferSizes(0, 4096))
     extends ChannelBMessage
     with HasTransferSizes {
   override def union[Message <: TLMessage](that: Message) = that match {
@@ -609,17 +676,19 @@ final case class GetB(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[GetB] &&
+    super[HasTransferSizes].support(emit)
 }
 
 /** ----> [[AccessAckDataC]] */
 final case class ArithmeticDataB(
-  transferSizes: TransferSizes,
-  MIN:           Boolean,
-  MAX:           Boolean,
-  MINU:          Boolean,
-  MAXU:          Boolean,
-  ADD:           Boolean,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  MIN:           Boolean = true,
+  MAX:           Boolean = true,
+  MINU:          Boolean = true,
+  MAXU:          Boolean = true,
+  ADD:           Boolean = true,
+  mayCorrupt:    Boolean = true)
     extends ChannelBMessage
     with HasTransferSizes
     with HasData
@@ -637,15 +706,19 @@ final case class ArithmeticDataB(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[ArithmeticDataB] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit) &&
+    super[IsArithmetic].support(emit)
 }
 
 /** ----> [[AccessAckDataC]] */
 final case class LogicalDataB(
-  transferSizes: TransferSizes,
-  XOR:           Boolean,
-  OR:            Boolean,
-  AND:           Boolean,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  XOR:           Boolean = true,
+  OR:            Boolean = true,
+  AND:           Boolean = true,
+  mayCorrupt:    Boolean = true)
     extends ChannelBMessage
     with HasTransferSizes
     with HasData
@@ -661,6 +734,10 @@ final case class LogicalDataB(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[LogicalDataB] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit) &&
+    super[IsLogical].support(emit)
 }
 
 /** <---- [[GetB]], [[ArithmeticDataB]], [[LogicalDataB]]
@@ -668,8 +745,8 @@ final case class LogicalDataB(
   * @note cannot deny.
   */
 final case class AccessAckDataC(
-  transferSizes: TransferSizes,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  mayCorrupt:    Boolean = true)
     extends ChannelCMessage
     with HasTransferSizes
     with HasData {
@@ -681,14 +758,17 @@ final case class AccessAckDataC(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[LogicalDataB] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit)
 }
 
 // Put in TL-C
 
 /** ----> [[AccessAckC]] */
 final case class PutFullDataB(
-  transferSizes: TransferSizes,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  mayCorrupt:    Boolean = true)
     extends ChannelBMessage
     with HasTransferSizes
     with HasData {
@@ -700,12 +780,15 @@ final case class PutFullDataB(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[PutFullDataB] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit)
 }
 
 /** ----> [[AccessAckC]] */
 final case class PutPartialDataB(
-  transferSizes: TransferSizes,
-  mayCorrupt:    Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  mayCorrupt:    Boolean = true)
     extends ChannelCMessage
     with HasTransferSizes
     with HasData {
@@ -717,6 +800,9 @@ final case class PutPartialDataB(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[PutPartialDataB] &&
+    super[HasTransferSizes].support(emit) &&
+    super[HasData].support(emit)
 }
 
 /** <---- [[PutFullDataB]], [[PutPartialDataB]]
@@ -728,14 +814,15 @@ final case class AccessAckC() extends ChannelCMessage {
     case _: AccessAckC => this
     case _ => super.union(that)
   }
+  def support(emit: TLMessage): Boolean = emit.isInstanceOf[AccessAckC]
 }
 
 // Intent in TL-C
 /** ----> [[HintAckC]] */
 final case class IntentB(
-  transferSizes: TransferSizes,
-  PrefetchRead:  Boolean,
-  PrefetchWrite: Boolean)
+  transferSizes: TransferSizes = TransferSizes(0, 4096),
+  PrefetchRead:  Boolean = true,
+  PrefetchWrite: Boolean = true)
     extends ChannelBMessage
     with HasTransferSizes
     with IsPrefetch {
@@ -748,6 +835,9 @@ final case class IntentB(
       ).asInstanceOf[this.type]
     case _ => super.union(that)
   }
+  override def support(emit: TLMessage): Boolean = emit.isInstanceOf[IntentB] &&
+    super[HasTransferSizes].support(emit) &&
+    super[IsPrefetch].support(emit)
 }
 
 /** <---- [[IntentB]]
@@ -759,4 +849,5 @@ final case class HintAckC() extends ChannelCMessage {
     case _: HintAckC => this
     case _ => super.union(that)
   }
+  def support(emit: TLMessage): Boolean = emit.isInstanceOf[HintAckC]
 }
